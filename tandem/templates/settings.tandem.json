@@ -1,0 +1,22 @@
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "0",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "inherit"
+  },
+  "permissions": {
+    "allow": [
+      "Read",
+      "WebSearch",
+      "Edit({{DOCS}}/tasks/**)",
+      "Edit({{DOCS}}/briefings/**)",
+      "Edit({{DOCS}}/reports/**)",
+      "Edit({{DOCS}}/log/**)",
+      "Bash(codex exec:*)",
+      "Bash(codex --version)",
+      "Bash(codex exec --help)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ]
+  }
+}

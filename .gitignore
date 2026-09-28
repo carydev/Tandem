@@ -1,0 +1,8 @@
+# 이 저장소는 배포용 템플릿만 담는다.
+# 설치 결과물이 실수로 커밋되지 않게 막는다.
+pack/
+.codex-last/
+docs/tandem/
+tandem/config.json
+.DS_Store
+Thumbs.db
