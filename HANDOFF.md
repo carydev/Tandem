@@ -96,9 +96,9 @@ HANDOFF.md                   이 파일
 - [x] Windows PowerShell 5.1 검증 (2026-09-28, 5.1.19041): 빈 git 저장소 / 기존 `CLAUDE.md`·`settings.json`(hooks)·`.gitignore`
       있는 폴더 / 재실행 멱등성. 한글 출력 정상, 결과 파일 BOM 없음, JSON 유효, 자리표시자 잔존 0, 블록 중복 없음, hooks 보존
 - [x] codex 로그인됨 경로(실제 계정)와 미로그인 경로(빈 `CODEX_HOME`) 확인. **`codex login` 브라우저 흐름과 winget 설치는 미검증**
-- [ ] 첫 푸시 (원격에는 GitHub 자동 생성 README 커밋 `22e0e22` 하나뿐. 그 위에 얹는다)
-- [ ] 실제 URL로 한 줄 설치 검증 (빈 폴더에서 `iwr -useb https://raw.githubusercontent.com/carydev/Tandem/main/boot.ps1 | iex`)
-- [ ] 저장소 description, topics 설정
+- [x] 첫 푸시 `3334b14` (2026-09-28). GitHub 자동 생성 README 커밋 `22e0e22` 위에 얹음
+- [x] 실제 URL로 한 줄 설치 검증 (2026-09-28). PS 5.1, 빈 git 폴더에서 `iwr ... | iex` 성공, 20개 배치
+- [ ] 저장소 description, topics 설정 - `gh`가 로그인 안 돼 있어 사람이 GitHub 웹에서 직접 넣는다
 - [ ] 릴리스 태그 `v1.0`
 
 방침: **Windows 전용으로 최적화한다.** `install.sh`/`boot.sh`는 남겨 두지만 검증과 개선 대상이 아니다.
