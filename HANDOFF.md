@@ -28,6 +28,7 @@ tandem/
   templates/ko/, en/         언어별 템플릿 (상대 경로 구조 동일)
     claude/ codex/ docs/ blocks/ settings.json adapt.md
   tools/*.ps1                설치 대상에 그대로 복사되는 도구 (check, token-report, jev, manifest, codex-run, claude-run)
+docs/plan-plugin-distribution.md  보류된 플러그인 배포 계획
 docs/design-v1.1.md          v1.1 설계서 (모드, 렌더링, 지문 업데이트, 훅, Jev, 리포트, 래퍼)
 README.md / README.ko.md     사용자 문서 (영어 기본 / 한국어). 함께 고친다
 PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
@@ -107,6 +108,7 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 
 - [x] **v1.2** (2026-10-13): Jev 잔액 부족(402)·키 오류(401) 안내 + 배치표 대체 + 다음 세션 알림, Jev 끄기/켜기(`-NoJev`/`-UseJev`, 저장됨), 사용자 언어 일관성(전 출력), README Jev 절
       - Codex 카드 C10-C12. 검증: 4모드×2언어 통합 시험, 언어 검사(가짜 서버 시작 타이밍 때문에 402 항목이 가끔 실패 - 기능 결함 아님, 재실행 2회 통과)
+- [ ] **보류** 플러그인 방식 배포 (Claude `/plugin`, Codex `codex plugin`) - 한 줄 설치는 공식 마켓플레이스 심사가 필요해 보류. 계획: `docs/plan-plugin-distribution.md`
 
 ## 지키면 좋을 것
 
