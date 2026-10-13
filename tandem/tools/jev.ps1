@@ -1,4 +1,5 @@
 ﻿param([switch]$Route,[switch]$Escalate,[switch]$NeedCritic,[string]$Card,[string]$FailNote,[string[]]$Tiers=@('top','mid','light'),[string]$Request,[switch]$DryRun,[string]$Endpoint='https://openrouter.ai/api/alpha/decisions')
+try { [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false) } catch {}  # UTF-8 stdout: PS 5.1 defaults to the OEM code page (cp949 on Korean Windows), which garbles non-ASCII output read by Bash/Claude
 $ErrorActionPreference = 'Stop'
 function Fallback([string]$reason,[string]$notice) {
     Write-Output (@{ok=$false;decided_by='table';reason=$reason;notice=$notice} | ConvertTo-Json -Compress)

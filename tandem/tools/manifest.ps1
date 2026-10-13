@@ -1,4 +1,5 @@
 ﻿param([switch]$Rehash,[switch]$Status)
+try { [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false) } catch {}  # UTF-8 stdout: PS 5.1 defaults to the OEM code page (cp949 on Korean Windows), which garbles non-ASCII output read by Bash/Claude
 $ErrorActionPreference = 'Stop'
 try {
     $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))

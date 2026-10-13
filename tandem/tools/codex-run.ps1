@@ -1,4 +1,5 @@
 ﻿param([string]$Task,[ValidateSet('R1','R2','R3','single')][string]$Round='single',[string]$Card,[string]$Out,[string]$Model,[string]$Effort='low',[ValidateSet('workspace-write','read-only')][string]$Sandbox='workspace-write',[string]$DecidedBy='table',[string]$Prompt,[string]$Wait,[int]$WaitSeconds=540,[string]$RunnerState)
+try { [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false) } catch {}  # UTF-8 stdout: PS 5.1 defaults to the OEM code page (cp949 on Korean Windows), which garbles non-ASCII output read by Bash/Claude
 $ErrorActionPreference='Stop'
 $utf8=[Text.UTF8Encoding]::new($false)
 function Messages([string]$root) {

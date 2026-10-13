@@ -2,6 +2,12 @@
 
 **English** | [한국어](CHANGELOG.ko.md)
 
+## v1.2.1 - 2026-10-14
+
+### Fixed
+
+- `check.ps1`, `codex-run.ps1`, `claude-run.ps1`, `jev.ps1`, and `manifest.ps1` now set console output to UTF-8. Under Windows PowerShell 5.1 their non-ASCII output (for example Korean summaries from `codex-run.ps1`) was emitted in the OEM code page (cp949 on Korean Windows) and appeared garbled when read by Bash or Claude Code. `token-report.ps1` already did this.
+
 ## v1.2 - 2026-10-13
 
 ### Added
