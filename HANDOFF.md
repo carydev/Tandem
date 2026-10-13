@@ -99,7 +99,7 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
       - 승급 1회: C4 번역 gpt-6-luna 실패(구조만 복사) → gpt-6-sol 재시도 성공
 - [x] v1.1 푸시 `c41a28e` + 원격 검증 (2026-10-13): 실제 URL 옵션 설치(codex-main, en) 성공, 원격 VERSION 기준 업데이트 알림 "1.0 -> 1.1" 확인
 - [x] 릴리스 노트 `CHANGELOG.md`/`CHANGELOG.ko.md`, 태그 `v1.0`(3d4571b)·`v1.1`(4cdd196) 푸시 (2026-10-13)
-- [ ] GitHub Releases 페이지 생성 - `gh` 미로그인. 본문 초안은 `.work/v1.1/release-v1.1.md`(배포 안 함)
+- [x] GitHub Releases `v1.1` 생성 (2026-10-13) https://github.com/carydev/Tandem/releases/tag/v1.1
 
 방침: **Windows 전용으로 최적화한다.** `install.sh`/`boot.sh`는 남겨 두지만 검증과 개선 대상이 아니다.
 
