@@ -11,7 +11,7 @@
 - 저장소: `https://github.com/carydev/Tandem`
 - 소유자: carydev
 - 라이선스: MIT
-- 버전: v1.1 (`VERSION` 파일이 기준. 업데이트 알림이 이 파일을 본다)
+- 버전: v1.2 (`VERSION` 파일이 기준. 업데이트 알림이 이 파일을 본다)
 
 **이 저장소 자체에는 TANDEM이 설치돼 있지 않다.** 여기는 남에게 나눠 줄 템플릿을 담는 곳이다.
 `.gitignore`가 설치 결과물(`docs/tandem/`, `tandem/config.json`, `tandem/manifest.json`)을 막고 있다. 이건 의도된 것이다.
@@ -54,6 +54,8 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 | `CLAUDE_CODE_SUBAGENT_MODEL=sonnet` (inherit 폐기) | 모델 미지정 서브에이전트가 메인의 비싼 모델로 돌았다 (실측 11%) |
 | 카파시 규칙 1-3 전원, 4는 서브에게만 (같은 실패 3회면 중단) | 메인이 직접 반복 수정하면 "메인은 실무 안 함" 원칙이 깨진다 |
 | Jev는 모델·강도 선택, 승급, 교차 검수 필요 여부만 | 이유를 안 주는 모델이다. 합격 판정·G1/G2는 맡기지 않는다. 키는 사용자 환경변수에만 |
+| 사용자가 고르지 않은 언어는 절대 보이지 않음 (선택 전엔 Windows 표시 언어, `boot.ps1`은 유니코드 이스케이프로 ASCII 유지) | 사용자 요구(2026-10-13). 검사: `.work/v1.2/lang-check.ps1` (배포 안 함) |
+| Jev 끄기는 config에 저장 (`-NoJev`/`-UseJev`) | Jev를 원치 않는 사용자에게 질문·알림·호출이 전혀 없어야 한다 |
 | 메인의 사용자 응대 최우선 규칙 3개 | 사용자 요구(2026-10-13): 선택 언어로 대답, 분기점 설명, 완료 보고는 간결 |
 
 ## 검증된 것 (v1.1, 2026-10-13, Windows PowerShell 5.1.19041)
@@ -102,6 +104,9 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - [x] GitHub Releases `v1.1` 생성 (2026-10-13) https://github.com/carydev/Tandem/releases/tag/v1.1
 
 방침: **Windows 전용으로 최적화한다.** `install.sh`/`boot.sh`는 남겨 두지만 검증과 개선 대상이 아니다.
+
+- [x] **v1.2** (2026-10-13): Jev 잔액 부족(402)·키 오류(401) 안내 + 배치표 대체 + 다음 세션 알림, Jev 끄기/켜기(`-NoJev`/`-UseJev`, 저장됨), 사용자 언어 일관성(전 출력), README Jev 절
+      - Codex 카드 C10-C12. 검증: 4모드×2언어 통합 시험, 언어 검사(가짜 서버 시작 타이밍 때문에 402 항목이 가끔 실패 - 기능 결함 아님, 재실행 2회 통과)
 
 ## 지키면 좋을 것
 

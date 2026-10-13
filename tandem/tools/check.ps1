@@ -40,12 +40,24 @@ try {
             if ([version]$remote -gt [version]$local) { $notices.Add($messages[$lang].update + ": $local -> $remote") }
         } catch {}
     }
-    if ($config.jev.notify_missing_key) {
+    $jevEnabled = -not ($config.jev.PSObject.Properties['enabled'] -and $config.jev.enabled -eq $false)
+    if ($jevEnabled -and $config.jev.notify_missing_key) {
         $found = $false
         foreach ($name in @('TANDEM_JEV_API_KEY','OPENROUTER_API_KEY')) {
             if ([Environment]::GetEnvironmentVariable($name,'Process') -or [Environment]::GetEnvironmentVariable($name,'User')) { $found = $true; break }
         }
         if (!$found) { $notices.Add($messages[$lang].key) }
+    }
+    $jevStatusPath = Join-Path $root 'tandem/.cache/jev-status.json'
+    if ($jevEnabled -and (Test-Path -LiteralPath $jevStatusPath)) {
+        try {
+            $jevStatus = Get-Content -LiteralPath $jevStatusPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            $statusNotices = @{
+                en = @{ insufficient_credits='Jev has insufficient OpenRouter credits. Using the routing table for decisions now. Add credits at https://openrouter.ai/settings/credits.'; invalid_key='The Jev OpenRouter key is invalid or inactive. Using the routing table for decisions now. Check or replace the key at https://openrouter.ai/settings/keys, then update the user environment variable TANDEM_JEV_API_KEY.' }
+                ko = @{ insufficient_credits='Jev OpenRouter 크레딧이 부족합니다. 지금은 배치표로 대신 결정합니다. https://openrouter.ai/settings/credits 에서 크레딧을 충전하세요.'; invalid_key='Jev OpenRouter 키가 잘못되었거나 비활성 상태입니다. 지금은 배치표로 대신 결정합니다. https://openrouter.ai/settings/keys 에서 키를 확인하거나 재발급한 뒤 사용자 환경변수 TANDEM_JEV_API_KEY를 갱신하세요.' }
+            }
+            if ($statusNotices[$lang].ContainsKey([string]$jevStatus.status)) { $notices.Add($statusNotices[$lang][[string]$jevStatus.status]) }
+        } catch {}
     }
     if ($notices.Count) {
         $json = @{systemMessage=($notices -join ' ')} | ConvertTo-Json -Compress

@@ -66,7 +66,11 @@ iwr -useb https://raw.githubusercontent.com/carydev/Tandem/main/boot.ps1 | iex
 
 Jev는 OpenRouter를 통해 쓰는 TypeSafe의 결정 전용 모델이다. 모델과 추론 강도, 승급 여부, 교차 검수 필요 여부만 고른다. **산출물 합격 판정이나 G1/G2 결정은 하지 않는다.** 키가 없으면 v1.0처럼 배치표를 쓴다.
 
-OpenRouter 키는 **사용자** 환경변수 `TANDEM_JEV_API_KEY`에만 저장하거나 설치 중 대화형으로 입력한다. Jev를 쓰면 **과제 카드의 목표·제약·완료조건 절, 최대 6000자가 OpenRouter/TypeSafe로 전송된다.** 키는 프로젝트 파일에 쓰지 않는다. `-JevKey`도 쓸 수 있지만 명령 기록에 인자가 남을 수 있으므로 대화형 입력을 권장한다.
+OpenRouter 키는 설치 중 대화형으로 입력하거나 `[Environment]::SetEnvironmentVariable('TANDEM_JEV_API_KEY','<key>','User')`로 **사용자** 환경변수에 설정한다. Jev를 쓰면 **과제 카드의 목표·제약·완료조건 절, 최대 6000자가 OpenRouter/TypeSafe로 전송된다.** 승급 판단에는 최대 1000자의 실패 요약도 전송한다. 키는 프로젝트 파일에 쓰지 않는다. `-JevKey`도 쓸 수 있지만 명령 기록에 인자가 남을 수 있으므로 대화형 입력을 권장한다.
+
+OpenRouter는 입력 토큰에만 과금한다. 결정 1회는 약 1000~2000토큰이라 비용이 매우 낮다. 정확한 현재 단가는 [OpenRouter 모델 페이지](https://openrouter.ai/typesafe/jev-1.13)를 참고한다. 크레딧이 부족하거나 키가 잘못되면 배치표로 자동 대체하고 현재 세션에서 사용자에게 한 번 안내하며 다음 세션 시작 때 다시 알린다. Jev 호출이 성공하면 알림 상태를 지운다.
+
+설치할 때 `-NoJev`를 쓰면 `tandem/config.json`에 `jev.enabled=false`가 저장된다. 꺼진 동안에는 Jev 질문·알림·호출 없이 배치표로 결정한다. 다시 켜려면 설치기를 `-UseJev`로 재실행한다. 어느 옵션도 없으면 저장된 설정을 유지한다.
 
 ### 토큰 리포트
 
@@ -90,7 +94,8 @@ Claude 총괄 세션에서는 `/tandem-tokens`, PowerShell에서는 `tandem/tool
 | `-Mode <모드>` | 위의 네 모드 중 선택; 다시 실행하면 전환 |
 | `-Lang ko\|en` | 대화·문서·안내 언어 |
 | `-JevKey <키>` | OpenRouter 키; 명령 기록에 남을 수 있어 대화형 입력 권장 |
-| `-NoJev` | 선택적인 키 입력 질문 건너뛰기 |
+| `-NoJev` | Jev 끄기, 설정에 저장 |
+| `-UseJev` | Jev 다시 켜기, 설정에 저장 |
 | `-SkipDeps` | 의존성과 로그인 확인 건너뛰기 |
 | `-Yes` | 질문 없이 기본값 사용 |
 | `-Force` | 재배치 실행; 사용자가 고친 파일은 여전히 `.new`로 보존 |

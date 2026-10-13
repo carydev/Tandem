@@ -2,6 +2,24 @@
 
 **English** | [한국어](CHANGELOG.ko.md)
 
+## v1.2 - 2026-10-13
+
+### Added
+
+- `-NoJev` saves an off state with no Jev prompts, notices, or calls; `-UseJev` restores it.
+- Jev gives clear, localized notices for insufficient OpenRouter credits and invalid keys; session-start checks repeat the last issue until a successful call.
+- An optional `-Endpoint` argument supports local Jev response tests.
+
+### Changed
+
+- Everything TANDEM shows - installer, one-line bootstrap, tool output, reports, notices - now uses only the language you chose (`-Lang` or config). Before a language is set, the Windows display language is used.
+- HTTP 402 and 401 now fall back to the routing table with a specific reason. Main agents tell the user once per session; subagents pass the notice through.
+- The README explains Jev setup, data sent, estimated cost, and fallback behavior.
+
+### Upgrade notes
+
+- Re-run the installer to receive v1.2 files. Locally edited installed files may be written as `.new`; merge them through `/tandem`.
+
 ## v1.1 - 2026-10-13
 
 ### Added

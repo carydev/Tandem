@@ -29,7 +29,8 @@ function LocalMessage([string]$ko,[string]$en) { if ($lang -eq 'ko') { return $k
 try {
     $root=if ($ProjectRoot) {[IO.Path]::GetFullPath($ProjectRoot)} else {[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))}
     $configPath=Join-Path $root 'tandem/config.json'
-    $config=if (Test-Path $configPath) {Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json} else {[pscustomobject]@{docs_root='docs/tandem';lang='ko';mode='claude-main'}}
+    $localConfigPath=Join-Path ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))) 'tandem/config.json'
+    $config=if (Test-Path $configPath) {Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json} elseif (Test-Path $localConfigPath) {Get-Content $localConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json} else {[pscustomobject]@{docs_root='docs/tandem';lang=$(if ((Get-UICulture).Name -like 'ko*') {'ko'} else {'en'});mode='claude-main'}}
     $project=[IO.Path]::GetFullPath($root).TrimEnd('\')
     $docs=Join-Path $root $(if ($DocsRoot) {$DocsRoot} else {$config.docs_root})
     if (!$Out) { $Out=Join-Path $docs ('reports/usage/usage-'+(Get-Date -Format yyyyMMdd)+'.md') }
@@ -65,7 +66,7 @@ try {
                     if (!$sub) { $mainContexts.Add($inTokens+$write+$read) }
                     $requests++
                 }
-            } catch { Write-Warning ("Claude {0}: {1}" -f $file.Name,$_.Exception.Message) }
+            } catch { Write-Warning (LocalMessage "Claude 파일을 읽지 못했습니다: $($file.Name)" "Could not read Claude file: $($file.Name)") }
             finally { if ($reader) { $reader.Dispose() } }
             if ($sub) { $subRequests.Add($requests) }
         }
@@ -138,19 +139,23 @@ try {
     $settings=Join-Path $root '.claude/settings.json'
     if ((Test-Path $settings) -and ((Get-Content $settings -Raw) -match 'CLAUDE_CODE_SUBAGENT_MODEL["'']?\s*:\s*["'']inherit')) { $diagnosis.Add((LocalMessage 'Claude 서브에이전트가 메인 모델을 상속합니다. 하위 모델을 명시하세요.' 'Claude subagent model inherits the main model; choose an explicit lower model.')) }
     $lines=[Collections.Generic.List[string]]::new()
-    $lines.Add('# TANDEM token report'); $lines.Add('Period: '+$Days+' days. Equivalent tokens are relative comparison estimates.')
-    $lines.Add("Claude main sessions: $claudeSessions; subagents: $subCount; average main context/request: $avgContext; average subagent requests/call: $avgSub")
-    $lines.Add("Codex sessions: $codexSessions; unreadable: $codexUnreadable; turns/session: $avgTurns; tool output KB/session: $avgBytes; runs.jsonl: $runs")
-    $lines.Add(''); $lines.Add('| Role / model | Requests | Input | Cache write | Cache read | Output | Equivalent |'); $lines.Add('|---|---:|---:|---:|---:|---:|---:|')
-    foreach ($key in ($groups.Keys | Sort-Object)) { $g=$groups[$key]; $lines.Add("| $key | $($g.requests) | $($g.input) | $($g.write) | $($g.read) | $($g.output) | $([math]::Round($g.equivalent)) |") }
-    $lines.Add(''); $lines.Add('Codex models: '+(($modelDist.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join ', '))
-    $lines.Add('Codex effort: '+(($effortDist.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join ', '))
-    $lines.Add(''); $lines.Add('## Diagnosis'); foreach ($item in $diagnosis) { $lines.Add('- '+$item) }
+    $lines.Add((LocalMessage '# TANDEM 토큰 보고서' '# TANDEM token report'))
+    $lines.Add((LocalMessage "기간: $Days 일. 환산 토큰은 상대 비교용 추정치입니다." "Period: $Days days. Equivalent tokens are relative comparison estimates."))
+    $lines.Add((LocalMessage "Claude 메인 세션: $claudeSessions; 하위 에이전트: $subCount; 메인 요청당 평균 맥락: $avgContext; 하위 호출당 평균 요청: $avgSub" "Claude main sessions: $claudeSessions; subagents: $subCount; average main context/request: $avgContext; average subagent requests/call: $avgSub"))
+    $lines.Add((LocalMessage "Codex 세션: $codexSessions; 읽기 실패: $codexUnreadable; 세션당 턴: $avgTurns; 세션당 도구 출력(KB): $avgBytes; runs.jsonl: $runs" "Codex sessions: $codexSessions; unreadable: $codexUnreadable; turns/session: $avgTurns; tool output KB/session: $avgBytes; runs.jsonl: $runs"))
+    $lines.Add(''); $lines.Add((LocalMessage '| 역할 / 모델 | 요청 | 입력 | 캐시 쓰기 | 캐시 읽기 | 출력 | 환산 |' '| Role / model | Requests | Input | Cache write | Cache read | Output | Equivalent |')); $lines.Add('|---|---:|---:|---:|---:|---:|---:|')
+    foreach ($key in ($groups.Keys | Sort-Object)) { $g=$groups[$key]; $displayKey=$key.Replace('|',' / '); $lines.Add("| $displayKey | $($g.requests) | $($g.input) | $($g.write) | $($g.read) | $($g.output) | $([math]::Round($g.equivalent)) |") }
+    $lines.Add(''); $lines.Add((LocalMessage 'Codex 모델: ' 'Codex models: ')+(($modelDist.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join ', '))
+    $lines.Add((LocalMessage 'Codex 추론 강도: ' 'Codex effort: ')+(($effortDist.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join ', '))
+    $lines.Add(''); $lines.Add((LocalMessage '## 진단' '## Diagnosis')); foreach ($item in $diagnosis) { $lines.Add('- '+$item) }
     $dir=Split-Path -Parent $Out; if (!(Test-Path $dir)) { New-Item -ItemType Directory $dir -Force | Out-Null }
     [IO.File]::WriteAllText($Out,($lines -join "`n")+"`n",[Text.UTF8Encoding]::new($false))
     $watch.Stop()
-    $summary=@($lines[0],$lines[2],$lines[3],"Report: $Out",("Elapsed: {0:n1}s" -f $watch.Elapsed.TotalSeconds))
+    $summary=@($lines[0],$lines[2],$lines[3],((LocalMessage '보고서: ' 'Report: ')+$Out),((LocalMessage '소요 시간: {0:n1}초' 'Elapsed: {0:n1}s') -f $watch.Elapsed.TotalSeconds))
     $summary+=$diagnosis | Select-Object -First 30
     [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)
     $summary | Select-Object -First 40
-} catch { Write-Error $_ }
+} catch {
+    $errorLang=if ($lang -in @('ko','en')) {$lang} elseif ((Get-UICulture).Name -like 'ko*') {'ko'} else {'en'}
+    if ($errorLang -eq 'ko') { Write-Error '토큰 보고서를 만들지 못했습니다.' } else { Write-Error 'Could not create token report.' }
+}

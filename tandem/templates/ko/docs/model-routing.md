@@ -1,8 +1,9 @@
 # 모델 배치
 
 모델 ID를 tandem/config.json의 models에 기록하고, 배치된 파일 안의 미확정 표기를 같은 값으로 직접 바꾼 뒤 tandem/tools/manifest.ps1 -Rehash를 실행한다. 업데이트 때 설치 스크립트가 config 값으로 렌더하므로 다음 버전에도 유지된다. 모델이 없으면 임의 ID를 추측하지 않는다.
-Jev 키가 있으면 tandem/tools/jev.ps1 -Route -Card <카드경로>를 호출해 tier와 effort를 받는다. decided_by=jev를 로그에 남긴다.
+tandem/config.json에서 `jev.enabled`가 false면 jev.ps1을 호출하거나 사용자에게 Jev를 언급하지 않는다. 배치표로 결정하고 decided_by=table을 기록한다. 그 외에 Jev 키가 있으면 tandem/tools/jev.ps1 -Route -Card <카드경로>를 호출해 tier와 effort를 받는다. decided_by=jev를 로그에 남긴다.
 승급 판단은 tandem/tools/jev.ps1 -Escalate -Card <카드경로> -FailNote <실패요약>, 교차 검수 판단은 -NeedCritic -Card <카드경로>를 쓴다. 키가 없거나 오류·낮은 신뢰도면 아래 배치표를 쓴다. decided_by=table을 기록한다. Jev는 모델·강도, 승급, 교차 검수 필요성만 정하고 최종 판정과 G1/G2는 정하지 않는다.
+Jev가 `insufficient_credits` 또는 `invalid_key` 이유를 돌려주면 배치표로 결정한다. 메인은 반환된 `notice`를 그 세션에서 사용자에게 한 번만 안내하고 이후 호출에서 반복하지 않는다. 하위 에이전트와 전달책은 `notice`를 바꾸지 않고 메인에게 올린다.
 
 @@if claude-main
 | 역할 | 모델 | 기본 강도 |

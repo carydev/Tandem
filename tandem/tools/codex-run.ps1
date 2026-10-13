@@ -1,6 +1,15 @@
 ﻿param([string]$Task,[ValidateSet('R1','R2','R3','single')][string]$Round='single',[string]$Card,[string]$Out,[string]$Model,[string]$Effort='low',[ValidateSet('workspace-write','read-only')][string]$Sandbox='workspace-write',[string]$DecidedBy='table',[string]$Prompt,[string]$Wait,[int]$WaitSeconds=540,[string]$RunnerState)
 $ErrorActionPreference='Stop'
 $utf8=[Text.UTF8Encoding]::new($false)
+function Messages([string]$root) {
+    $lang=if ((Get-UICulture).Name -like 'ko*') {'ko'} else {'en'}
+    try { $saved=(Get-Content -LiteralPath (Join-Path $root 'tandem/config.json') -Raw -Encoding UTF8 | ConvertFrom-Json).lang; if ($saved -in @('ko','en')) { $lang=$saved } } catch {}
+    $table=@{
+        ko=@{task='Task, Card, Out, Model이 필요합니다'; fail='실행에 실패했습니다'; instruction='작업 카드 {0}을 읽고 따르세요. 결과 파일: {1}. 쓰기 범위: {2}. {3}`n작업 카드(UTF-8):`n{4}'; readonly=' 전체 결과를 마지막 메시지에 작성하세요. 래퍼가 Out에 저장합니다. 파일을 수정하지 마세요.'; writable=' 마지막 메시지는 5줄 이내 요약만 작성하세요.'}
+        en=@{task='Task, Card, Out, and Model are required'; fail='Run failed'; instruction='Read task card {0} and follow it. Output artifact: {1}. Write scope: {2}. {3}`nTask card (UTF-8):`n{4}'; readonly=' Return the full result in your final message; the wrapper saves it to Out. Do not edit files.'; writable=' Last message: summary only, at most five lines.'}
+    }
+    return $table[$lang]
+}
 function Quote([string]$s) { '"'+$s.Replace('"','\"')+'"' }
 function Relative([string]$path,[string]$root) { $prefix=$root.TrimEnd('\','/')+'\'; if ($path.StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase)) { return $path.Substring($prefix.Length).Replace('\','/') }; return $path }
 function Summary($state) {
@@ -18,6 +27,7 @@ function WaitDone([string]$path,[int]$seconds) {
 }
 try {
     $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
+    $m=Messages $root
     $stateDir=Join-Path $root '.codex-last'
     if ($RunnerState) {
         $s=Get-Content -LiteralPath $RunnerState -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -47,7 +57,7 @@ try {
         exit 0
     }
     if ($Wait) { WaitDone (Join-Path $stateDir ($Wait+'.state.json')) $WaitSeconds; exit 0 }
-    if (!$Task -or !$Card -or !$Out -or !$Model) { throw 'Task, Card, Out, and Model are required' }
+    if (!$Task -or !$Card -or !$Out -or !$Model) { Write-Output "status=fail $($m.task)"; exit 0 }
     [IO.Directory]::CreateDirectory($stateDir) | Out-Null
     $safe=(($Task+'-'+$Round) -replace '[^A-Za-z0-9_-]','_')
     $mutex=[Threading.Mutex]::new($false,'Local\Tandem-codex-'+[Convert]::ToBase64String([Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($root+'|'+$safe))).Substring(0,32).Replace('/','_'))
@@ -60,8 +70,8 @@ try {
         $cardFull=[IO.Path]::GetFullPath((Join-Path $root $Card)); $outFull=[IO.Path]::GetFullPath((Join-Path $root $Out))
         $cardText=Get-Content -LiteralPath $cardFull -Raw -Encoding UTF8
         $scope=([regex]::Match($cardText,'(?ms)^##\s*(쓰기 범위|Write scope)[^\r\n]*\r?\n(.*?)(?=^##\s|\z)')).Groups[2].Value.Trim()
-        $instruction="Read task card $cardFull and follow it. Output artifact: $outFull. Write scope: $scope. $Prompt`nTask card (UTF-8):`n$cardText"
-        if ($Sandbox -eq 'read-only') { $instruction+=' Return the full result in your final message; the wrapper saves it to Out. Do not edit files.' } else { $instruction+=' Last message: summary only, at most five lines.' }
+        $instruction=$m.instruction.Replace('{0}',$cardFull).Replace('{1}',$outFull).Replace('{2}',$scope).Replace('{3}',[string]$Prompt).Replace('{4}',$cardText).Replace('`n',"`n")
+        if ($Sandbox -eq 'read-only') { $instruction+=$m.readonly } else { $instruction+=$m.writable }
         $stem=Join-Path $stateDir $id; $statePath=$stem+'.state.json'
         [IO.File]::WriteAllText($stem+'.prompt',$instruction,$utf8)
         $config=Get-Content (Join-Path $root 'tandem/config.json') -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -70,4 +80,4 @@ try {
         $runner=Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Quote $PSCommandPath),'-RunnerState',(Quote $statePath)) -WorkingDirectory $root -PassThru -WindowStyle Hidden
     } finally { $mutex.ReleaseMutex(); $mutex.Dispose() }
     WaitDone $statePath $WaitSeconds
-} catch { Write-Output "status=fail $($_.Exception.Message)" }
+} catch { Write-Output "status=fail $($m.fail)" }

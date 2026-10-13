@@ -64,9 +64,13 @@ Execution wrappers wait without repeated polling and log calls automatically. Un
 
 ### Jev (optional)
 
-Jev is TypeSafe's decision-only model through OpenRouter. It can choose a model and reasoning effort, whether to escalate, and whether cross-review is needed. It does **not** judge artifact acceptance or decide G1/G2. Without a key, TANDEM uses its v1.0 routing table.
+Jev is TypeSafe's decision-only model through OpenRouter. It chooses a model and reasoning effort, whether to escalate, and whether cross-review is needed. It does **not** judge artifact acceptance or decide G1/G2. Without a key, TANDEM works as in v1.0 using its routing table.
 
-Store an OpenRouter key only in the **user** environment variable `TANDEM_JEV_API_KEY`, or enter it interactively during installation. When Jev is used, **the objective, constraints, and completion-conditions sections of a task card, up to 6,000 characters, are sent to OpenRouter/TypeSafe**. The key is not written to project files. `-JevKey` is available, but command history may retain its argument; interactive entry is recommended.
+Enter an OpenRouter key interactively during installation, or set the **user** environment variable with `[Environment]::SetEnvironmentVariable('TANDEM_JEV_API_KEY','<key>','User')`. When Jev is used, **the objective, constraints, and completion-conditions sections of a task card, up to 6,000 characters, are sent to OpenRouter/TypeSafe**. For an escalation decision, a failure summary of up to 1,000 characters is also sent. The key is not written to project files. `-JevKey` is available, but command history may retain its argument; interactive entry is recommended.
+
+OpenRouter charges for input tokens only. A decision uses roughly 1,000–2,000 tokens, so the cost is very low; see the [OpenRouter model page](https://openrouter.ai/typesafe/jev-1.13) for the current exact rate. If credits run out or the key is invalid, TANDEM automatically uses the routing table, tells the user once in the current session, and shows a reminder at the start of the next session. A successful Jev call clears the reminder.
+
+Use `-NoJev` when installing to turn Jev off and save `jev.enabled=false` in `tandem/config.json`. While it is off, TANDEM uses the routing table without Jev prompts, notices, or requests. Re-run the installer with `-UseJev` to turn it back on. With neither option, the saved setting is kept.
 
 ### Token report
 
@@ -90,7 +94,8 @@ path\to\Tandem\install.ps1 -Mode codex-main -Lang en
 | `-Mode <mode>` | One of the four modes above; re-run to switch |
 | `-Lang ko\|en` | Language for conversation, docs, and guidance |
 | `-JevKey <key>` | OpenRouter key; prefer interactive entry because command history may retain it |
-| `-NoJev` | Skip the optional key prompt |
+| `-NoJev` | Turn Jev off and save the setting |
+| `-UseJev` | Turn Jev back on and save the setting |
 | `-SkipDeps` | Skip dependency and login checks |
 | `-Yes` | Use defaults without prompts |
 | `-Force` | Re-run placement; user-edited files still go to `.new` |

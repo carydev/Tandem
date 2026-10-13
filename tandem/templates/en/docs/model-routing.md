@@ -1,8 +1,9 @@
 # Model Routing
 
 Record model IDs under models in tandem/config.json, directly replace unresolved markers in installed files with the same values, then run tandem/tools/manifest.ps1 -Rehash. On update, the installer renders from config, preserving the values in the next version. Do not guess an ID if a model is unavailable.
-If a Jev key is available, call tandem/tools/jev.ps1 -Route -Card <card-path> to receive tier and effort. Record decided_by=jev in the log.
+If `jev.enabled` is false in tandem/config.json, do not call jev.ps1 or mention Jev to the user. Decide with the routing table and record decided_by=table. Otherwise, if a Jev key is available, call tandem/tools/jev.ps1 -Route -Card <card-path> to receive tier and effort. Record decided_by=jev in the log.
 For escalation, use tandem/tools/jev.ps1 -Escalate -Card <card-path> -FailNote <failure-summary>. For cross-review, use -NeedCritic -Card <card-path>. If the key is missing, an error occurs, or confidence is low, use the routing table below. Record decided_by=table. Jev determines only model and effort, escalation, and the need for cross-review; it does not make the final decision or determine G1/G2.
+If Jev returns reason `insufficient_credits` or `invalid_key`, decide with the routing table. The main agent tells the user the returned `notice` once in that session, without repeating it for later calls. Subagents and dispatchers pass the `notice` unchanged to the main agent.
 
 @@if claude-main
 | Role | Model | Default effort |

@@ -43,7 +43,8 @@ tandem-worker-top/mid/light가 Agent 도구에 보이고 각 모델로 실행되
 
 ## 4. Jev와 토큰
 환경 변수 TANDEM_JEV_API_KEY 또는 OPENROUTER_API_KEY의 유무만 확인하고 키 값은 출력하거나 파일에 적지 않는다.
-키가 있을 때만 tandem/tools/jev.ps1 -Route -Card <안전한 시험 카드>를 스모크 테스트한다.
+tandem/config.json에서 `jev.enabled`가 false면 Jev 점검을 모두 건너뛰고 jev.ps1을 호출하지 않는다. 배치표를 쓰며 사용자에게 Jev를 언급하지 않는다.
+그 외에 키가 있을 때만 tandem/tools/jev.ps1 -Route -Card <안전한 시험 카드>를 스모크 테스트한다.
 키가 없으면 배치표로 돌아가는지 확인한다. Jev는 최종 판정과 G1/G2를 대신하지 않는다.
 tandem/tools/token-report.ps1 -Days 7 실행과 요약·상세 보고서 경로를 확인한다.
 

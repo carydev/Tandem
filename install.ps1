@@ -12,12 +12,14 @@ param(
   [ValidateSet('ko','en')][string]$Lang,
   [string]$JevKey,
   [switch]$NoJev,
+  [switch]$UseJev,
   [switch]$SkipDeps,
   [switch]$Yes,
   [switch]$Force,
   [string]$TemplateRoot
 )
 $ErrorActionPreference = 'Stop'
+$uiLang = if ($Lang) { $Lang } elseif ((Get-UICulture).Name -like 'ko*') { 'ko' } else { 'en' }
 $sourceRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $root = (Get-Location).Path
 $version = [IO.File]::ReadAllText((Join-Path $sourceRoot 'VERSION')).Trim()
@@ -25,9 +27,11 @@ $utf8 = New-Object Text.UTF8Encoding($false)
 $strictUtf8 = New-Object Text.UTF8Encoding($false,$true)
 $today = Get-Date -Format 'yyyy-MM-dd'
 $messages = @{
-  ko = @{ done='설치 완료'; unchanged='변경 없음'; added='배치'; replaced='교체'; preserved='사용자 수정 보존, .new 생성'; removed='제거'; warning='경고'; missing='소스 파일 없음'; parse='JSON 파싱 실패, .new 생성'; jevPrompt='Jev(OpenRouter) API 키 (Enter로 건너뜀)'; jevWarning='-JevKey 값은 명령 기록에 남을 수 있으니 대화형 입력을 권장합니다.'; newConflict='.new 가 이미 있고 내용이 다름 — 병합 후 지워라'; encoding='UTF-8 디코딩 실패, 원본 보존'; invalidPath='manifest 삭제 경로 거부'; installCodex='Codex CLI를 지금 설치할까? [y/N]'; nextClaude='다음: claude 실행 후 /tandem 입력'; nextCodex='다음: codex 실행 후 tandem/adapt.md를 읽고 적응 진행. /hooks에서 훅 승인' }
-  en = @{ done='Installation complete'; unchanged='No changes'; added='Installed'; replaced='Replaced'; preserved='User edit preserved; wrote .new'; removed='Removed'; warning='Warning'; missing='Missing source file'; parse='Invalid JSON; wrote .new'; jevPrompt='Jev (OpenRouter) API key (Enter to skip)'; jevWarning='-JevKey may remain in command history; interactive input is recommended.'; newConflict='.new already exists with different content — merge and delete it'; encoding='UTF-8 decoding failed; original preserved'; invalidPath='Refused manifest deletion path'; installCodex='Install Codex CLI now? [y/N]'; nextClaude='Next: run claude, then /tandem'; nextCodex='Next: run codex and follow tandem/adapt.md. Approve hooks with /hooks' }
+  ko = @{ done='설치 완료'; unchanged='변경 없음'; added='배치'; replaced='교체'; preserved='사용자 수정 보존, .new 생성'; removed='제거'; warning='경고'; missing='소스 파일 없음'; parse='JSON 파싱 실패, .new 생성'; jevChoice='Jev(OpenRouter) 사용 방법'; jevKeyChoice='키 입력해서 사용'; jevLaterChoice='나중에 (알림 유지)'; jevOffChoice='사용 안 함 (질문·알림 끔)'; jevOn='Jev: 켜짐. 끄려면 -NoJev'; jevOff='Jev: 꺼짐. 다시 켜려면 -UseJev'; jevPrompt='Jev(OpenRouter) API 키 (Enter로 건너뜀)'; jevWarning='-JevKey 값은 명령 기록에 남을 수 있으니 대화형 입력을 권장합니다.'; newConflict='.new 가 이미 있고 내용이 다름 — 병합 후 지워라'; encoding='UTF-8 디코딩 실패, 원본 보존'; invalidPath='manifest 삭제 경로 거부'; installCodex='Codex CLI를 지금 설치할까? [y/N]'; nextClaude='다음: claude 실행 후 /tandem 입력'; nextCodex='다음: codex 실행 후 tandem/adapt.md를 읽고 적응 진행. /hooks에서 훅 승인'; exclusive='-NoJev와 -UseJev 중 하나만 지정하세요.'; badConfig='tandem/config.json 오류'; badDocs='DocsRoot는 프로젝트 안의 상대 경로여야 합니다.'; selectMode='모드 선택'; missingLang='템플릿 언어 폴더 없음'; emptyContract='tandem/files.json에 파일 목록이 없습니다.'; unresolved='해결되지 않은 템플릿 토큰'; badDestination='잘못된 설치 대상 경로'; badManifest='tandem/manifest.json 오류'; missingMarker='블록 경계 표시 없음'; badJsonTemplate='JSON 템플릿 오류' }
+  en = @{ done='Installation complete'; unchanged='No changes'; added='Installed'; replaced='Replaced'; preserved='User edit preserved; wrote .new'; removed='Removed'; warning='Warning'; missing='Missing source file'; parse='Invalid JSON; wrote .new'; jevChoice='How to use Jev (OpenRouter)'; jevKeyChoice='Enter a key and use it'; jevLaterChoice='Later (keep notices)'; jevOffChoice='Do not use (turn off prompts and notices)'; jevOn='Jev: on. Turn off with -NoJev'; jevOff='Jev: off. Turn on with -UseJev'; jevPrompt='Jev (OpenRouter) API key (Enter to skip)'; jevWarning='-JevKey may remain in command history; interactive input is recommended.'; newConflict='.new already exists with different content — merge and delete it'; encoding='UTF-8 decoding failed; original preserved'; invalidPath='Refused manifest deletion path'; installCodex='Install Codex CLI now? [y/N]'; nextClaude='Next: run claude, then /tandem'; nextCodex='Next: run codex and follow tandem/adapt.md. Approve hooks with /hooks'; exclusive='Use either -NoJev or -UseJev.'; badConfig='Invalid tandem/config.json'; badDocs='DocsRoot must be a relative path inside the project.'; selectMode='Select mode'; missingLang='Template language folder missing'; emptyContract='tandem/files.json has no files.'; unresolved='Unresolved template token'; badDestination='Invalid contract destination'; badManifest='Invalid tandem/manifest.json'; missingMarker='Missing block markers'; badJsonTemplate='Invalid JSON template' }
 }
+$m = $messages[$uiLang]
+if ($NoJev -and $UseJev) { throw $m.exclusive }
 function Native([scriptblock]$body) {
   $old = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
   try { & $body } finally { $ErrorActionPreference = $old }
@@ -88,32 +92,35 @@ $configPath = Join-Path $root 'tandem/config.json'
 $existing = $null
 if (Test-Path -LiteralPath $configPath) {
   try { $existing = (ReadUtf8 $configPath) | ConvertFrom-Json }
-  catch { throw "Invalid tandem/config.json: $_" }
+  catch { throw $m.badConfig }
 }
+$preLang = if ($Lang) { $Lang } elseif ($existing -and $existing.lang -in @('ko','en')) { [string]$existing.lang } else { $uiLang }
+$m = $messages[$preLang]
 $previousDocsRoot = if ($existing -and $existing.docs_root) { [string]$existing.docs_root } else { '' }
 if (-not $PSBoundParameters.ContainsKey('DocsRoot')) {
   if ($existing -and $existing.docs_root) { $DocsRoot = [string]$existing.docs_root } else { $DocsRoot = 'docs/tandem' }
 }
 $DocsRoot = $DocsRoot.TrimEnd([char[]]@('/',[char]92)).Replace([char]92, [char]47)
-if ([IO.Path]::IsPathRooted($DocsRoot) -or $DocsRoot -match '(^|/)\.\.(/|$)' -or -not $DocsRoot) { throw 'DocsRoot must be a relative path inside the project.' }
+if ([IO.Path]::IsPathRooted($DocsRoot) -or $DocsRoot -match '(^|/)\.\.(/|$)' -or -not $DocsRoot) { throw $m.badDocs }
 $modes = @('claude-main','codex-main','claude-solo','codex-solo')
 if (-not $PSBoundParameters.ContainsKey('Mode')) {
   if ($existing -and $modes -contains $existing.mode) { $Mode = [string]$existing.mode }
-  else { $Mode = AskChoice 'Select mode / 모드 선택' $modes 'claude-main' }
+  else { $Mode = AskChoice $m.selectMode $modes 'claude-main' }
 }
 if (-not $PSBoundParameters.ContainsKey('Lang')) {
   if ($existing -and @('ko','en') -contains $existing.lang) { $Lang = [string]$existing.lang }
   else {
-    $defaultLang = if ([Globalization.CultureInfo]::CurrentUICulture.TwoLetterISOLanguageName -eq 'ko') { 'ko' } else { 'en' }
-    $Lang = AskChoice 'Select language / 언어 선택' @('ko','en') $defaultLang
+    $defaultLang = $uiLang
+    $Lang = AskChoice '언어 / Language: 1) 한국어  2) English' @('ko','en') $(if ($defaultLang -eq 'ko') {'1'} else {'2'})
+    if ($Lang -eq '1') { $Lang = 'ko' }; if ($Lang -eq '2') { $Lang = 'en' }
   }
 }
 $m = $messages[$Lang]
 if (-not $TemplateRoot) { $TemplateRoot = Join-Path $sourceRoot 'tandem/templates' }
 $langRoot = Join-Path $TemplateRoot $Lang
-if (-not (Test-Path -LiteralPath $langRoot)) { throw "Template language folder missing: $langRoot" }
+if (-not (Test-Path -LiteralPath $langRoot)) { throw "$($m.missingLang): $langRoot" }
 $contract = (ReadUtf8 (Join-Path $sourceRoot 'tandem/files.json')) | ConvertFrom-Json
-if (-not $contract.files) { throw 'tandem/files.json has no files.' }
+if (-not $contract.files) { throw $m.emptyContract }
 
 # Preserve existing values while filling the v1.1 schema and migrating v1.0 model names.
 $project = Split-Path -Leaf $root
@@ -145,6 +152,9 @@ if (-not $cfg.jev) { $cfg | Add-Member -NotePropertyName jev -NotePropertyValue 
 [void](Prop $cfg.jev 'key_env' 'TANDEM_JEV_API_KEY')
 [void](Prop $cfg.jev 'min_confidence' 0.6)
 [void](Prop $cfg.jev 'notify_missing_key' $true)
+[void](Prop $cfg.jev 'enabled' $true)
+if ($NoJev) { $cfg.jev.enabled = $false }
+if ($UseJev) { $cfg.jev.enabled = $true }
 if (-not $cfg.update) { $cfg | Add-Member -NotePropertyName update -NotePropertyValue ([pscustomobject]@{}) -Force }
 [void](Prop $cfg.update 'repo' 'carydev/Tandem')
 [void](Prop $cfg.update 'ref' 'main')
@@ -157,18 +167,24 @@ if (-not $cfg.update) { $cfg | Add-Member -NotePropertyName update -NoteProperty
 $changes = 0
 if (SaveText $configPath (Json $cfg)) { $changes++; Note "config.json: $($m.replaced)" }
 
-if ($JevKey) {
+if ($cfg.jev.enabled -and $JevKey) {
   Warn $m.jevWarning
   [Environment]::SetEnvironmentVariable('TANDEM_JEV_API_KEY', $JevKey, 'User')
   [Environment]::SetEnvironmentVariable('TANDEM_JEV_API_KEY', $JevKey, 'Process')
-} elseif (-not $NoJev -and -not $Yes -and -not [Environment]::GetEnvironmentVariable('TANDEM_JEV_API_KEY','User') -and -not $env:TANDEM_JEV_API_KEY) {
-  $secure = Read-Host $m.jevPrompt -AsSecureString
-  if ($secure.Length -gt 0) {
-    $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
-    try { $key = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) }
-    finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
-    [Environment]::SetEnvironmentVariable('TANDEM_JEV_API_KEY', $key, 'User')
-    [Environment]::SetEnvironmentVariable('TANDEM_JEV_API_KEY', $key, 'Process')
+} elseif ($cfg.jev.enabled -and -not $Yes -and -not [Environment]::GetEnvironmentVariable('TANDEM_JEV_API_KEY','User') -and -not $env:TANDEM_JEV_API_KEY) {
+  $choice = AskChoice $m.jevChoice @($m.jevKeyChoice,$m.jevLaterChoice,$m.jevOffChoice) '2'
+  if ($choice -eq $m.jevOffChoice) {
+    $cfg.jev.enabled = $false
+    if (SaveText $configPath (Json $cfg)) { $changes++; Note "config.json: $($m.replaced)" }
+  } elseif ($choice -eq $m.jevKeyChoice) {
+    $secure = Read-Host $m.jevPrompt -AsSecureString
+    if ($secure.Length -gt 0) {
+      $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+      try { $key = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) }
+      finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
+      [Environment]::SetEnvironmentVariable('TANDEM_JEV_API_KEY', $key, 'User')
+      [Environment]::SetEnvironmentVariable('TANDEM_JEV_API_KEY', $key, 'Process')
+    }
   }
 }
 
@@ -215,12 +231,12 @@ function Render([string]$source) {
   }
   $text = $out.ToString()
   foreach ($key in $map.Keys) { $text = $text.Replace($key, [string]$map[$key]) }
-  if ($text -match '\{\{[A-Z_]+\}\}|@@(?:if|endif)') { throw "Unresolved template token: $source" }
+  if ($text -match '\{\{[A-Z_]+\}\}|@@(?:if|endif)') { throw "$($m.unresolved): $source" }
   return $text
 }
 function Dest([string]$relative) {
   $relative = $relative.Replace('{{DOCS}}', $DocsRoot).Replace('\','/')
-  if ([IO.Path]::IsPathRooted($relative) -or $relative -match '(^|/)\.\.(/|$)') { throw "Invalid contract destination: $relative" }
+  if ([IO.Path]::IsPathRooted($relative) -or $relative -match '(^|/)\.\.(/|$)') { throw "$($m.badDestination): $relative" }
   return $relative
 }
 $manifestPath = Join-Path $root 'tandem/manifest.json'
@@ -229,7 +245,7 @@ if (Test-Path -LiteralPath $manifestPath) {
   try {
     $manifest = (ReadUtf8 $manifestPath) | ConvertFrom-Json
     if (-not $manifest.files) { $manifest | Add-Member -NotePropertyName files -NotePropertyValue ([pscustomobject]@{}) -Force }
-  } catch { throw "Invalid tandem/manifest.json: $_" }
+  } catch { throw $m.badManifest }
 }
 $wanted = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
 $activeBlocks = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
@@ -303,7 +319,7 @@ foreach ($entry in $contract.files | Where-Object { $_.kind -eq 'block' }) {
     $source = Join-Path $langRoot $entry.src
     if (-not (Test-Path -LiteralPath $source)) { Warn "$($m.missing): $source"; continue }
     $block = (Render $source).TrimEnd()
-    if ($block -notmatch '<!-- TANDEM:BEGIN -->' -or $block -notmatch '<!-- TANDEM:END -->') { throw "Missing block markers: $source" }
+    if ($block -notmatch '<!-- TANDEM:BEGIN -->' -or $block -notmatch '<!-- TANDEM:END -->') { throw "$($m.missingMarker): $source" }
     if (Test-Path -LiteralPath $full) {
       try { $current = ReadUtf8 $full }
       catch {
@@ -367,7 +383,7 @@ foreach ($entry in $contract.files | Where-Object { $_.kind -in @('settings','co
     if (-not (Test-Path -LiteralPath $source)) { Warn "$($m.missing): $source"; continue }
     $template = Render $source
     try { $incoming = $template | ConvertFrom-Json }
-    catch { throw "Invalid JSON template: $source" }
+    catch { throw "$($m.badJsonTemplate): $source" }
   }
   if (Test-Path -LiteralPath $full) {
     try { $current = (ReadUtf8 $full) | ConvertFrom-Json }
@@ -424,5 +440,6 @@ if (SaveText $gitignore $ignoreText) { $changes++; Note "$($m.replaced): .gitign
 
 if ($changes -eq 0) { Note $m.unchanged }
 Write-Host $m.done -ForegroundColor Green
+Write-Host $(if ($cfg.jev.enabled) { $m.jevOn } else { $m.jevOff })
 if ($Mode -like 'claude-*') { Write-Host $m.nextClaude } else { Write-Host $m.nextCodex }
 exit 0

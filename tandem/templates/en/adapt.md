@@ -43,7 +43,8 @@ Do not cross G1/G2 before the user approves.
 
 ## 4. Jev and tokens
 Check only whether the TANDEM_JEV_API_KEY or OPENROUTER_API_KEY environment variable exists. Do not print or record key values.
-Only when a key exists, smoke-test tandem/tools/jev.ps1 -Route -Card <safe test card>.
+If `jev.enabled` is false in tandem/config.json, skip all Jev checks, do not call jev.ps1, use the assignment table, and do not mention Jev to the user.
+Otherwise, only when a key exists, smoke-test tandem/tools/jev.ps1 -Route -Card <safe test card>.
 If there is no key, check that routing falls back to the assignment table. Jev does not replace final judgment or G1/G2.
 Run tandem/tools/token-report.ps1 -Days 7 and check the paths of the summary and detailed reports.
 
