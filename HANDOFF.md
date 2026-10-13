@@ -5,43 +5,36 @@
 
 ## 이 저장소는 무엇인가
 
-**TANDEM** — Claude가 지휘하고 Codex가 실무를 하는 AI 에이전트 하네스.
+**TANDEM** — 메인(대화 상대)이 지휘하고 서브가 실무를 하는 AI 에이전트 하네스. Claude/Codex 조합 4가지 모드.
 어느 프로젝트에나 설치할 수 있는 배포용 템플릿 저장소다.
 
 - 저장소: `https://github.com/carydev/Tandem`
 - 소유자: carydev
 - 라이선스: MIT
-- 버전: v1.0
+- 버전: v1.1 (`VERSION` 파일이 기준. 업데이트 알림이 이 파일을 본다)
 
 **이 저장소 자체에는 TANDEM이 설치돼 있지 않다.** 여기는 남에게 나눠 줄 템플릿을 담는 곳이다.
-`.gitignore`가 설치 결과물(`docs/tandem/`, `tandem/config.json`)을 막고 있다. 이건 의도된 것이다.
+`.gitignore`가 설치 결과물(`docs/tandem/`, `tandem/config.json`, `tandem/manifest.json`)을 막고 있다. 이건 의도된 것이다.
 
 ## 구조
 
 ```
-install.ps1 / install.sh     설치 스크립트 (사람이 직접 받았을 때)
-boot.ps1 / boot.sh           원격 한 줄 설치 부트스트랩
+install.ps1                  설치·업데이트 스크립트 (UTF-8 BOM)
+boot.ps1                     원격 한 줄 설치 (ASCII 전용, BOM 없음 - 절대 바꾸지 마라)
+install.sh / boot.sh         v1.0 그대로. 지원 안 함
+VERSION                      현재 버전 (업데이트 알림 기준)
 tandem/
-  adapt.md                   설치 후 /tandem 이 읽는 적응 지시서
-  templates/                 설치 시 배치되는 원본 파일들
-    claude/agents/*.md       팀장, 전달책, 교차 검수
-    claude/commands/*.md     /tandem, /tandem-status
-    codex/config.toml        Codex 프로파일 4종
-    codex/agents/*.toml      실무 리드, 조사, 구현, 검토
-    docs/*.md                운영 문서 6종
-    CLAUDE.tandem.md         CLAUDE.md 에 삽입될 블록
-    AGENTS.tandem.md         AGENTS.md 에 삽입될 블록
-    settings.tandem.json     .claude/settings.json 에 병합될 조각
-README.md                    사용자용 문서 (영어, 기본)
-README.ko.md                 사용자용 문서 (한국어)
-PUBLISH.md                   배포 절차 (포크하는 사람용)
-QUICKSTART.txt               3줄 요약
-LICENSE                      MIT
-HANDOFF.md                   이 파일
+  files.json                 파일 계약: 무엇을 어느 모드에 어디로 놓는가
+  templates/ko/, en/         언어별 템플릿 (상대 경로 구조 동일)
+    claude/ codex/ docs/ blocks/ settings.json adapt.md
+  tools/*.ps1                설치 대상에 그대로 복사되는 도구 (check, token-report, jev, manifest, codex-run, claude-run)
+docs/design-v1.1.md          v1.1 설계서 (모드, 렌더링, 지문 업데이트, 훅, Jev, 리포트, 래퍼)
+README.md / README.ko.md     사용자 문서 (영어 기본 / 한국어). 함께 고친다
+PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 ```
 
-`templates/` 안의 파일에는 `{{PROJECT}}`, `{{DOCS}}`, `{{MODEL_MID}}` 같은 자리표시자가 있다.
-설치 스크립트가 치환한다. **템플릿을 고칠 때 자리표시자를 깨뜨리지 마라.**
+템플릿에는 `{{PROJECT}}`, `{{DOCS}}`, `{{MODEL_MID}}` 등 자리표시자와 `@@if <모드...>` / `@@endif` 줄 조건이 있다.
+설치 스크립트가 처리한다. **자리표시자·조건 줄을 깨뜨리지 마라.** ko 를 고치면 en 도 같은 의미로 고친다.
 
 ## 설계 결정과 이유 (되돌리지 마라)
 
@@ -52,33 +45,35 @@ HANDOFF.md                   이 파일
 | 적대 검토는 별도 세션 + `-m` | Codex 일부 버전에서 하위 일꾼 모델 지정이 막혀 있다. 별도 세션이면 버전과 무관하게 분리 보장 |
 | Agent Teams 기본 꺼짐 | 팀원이 전부 Claude라 비용이 크다. 실무는 Codex가 한다 |
 | 하위 일꾼이 파일에 씀 | 반환 payload를 못 받고 끝나는 사례가 보고돼 있다 |
-| 기존 파일 덮어쓰지 않음 | `.new`로 저장. 설치가 남의 프로젝트를 깨면 안 된다 |
+| 기존 파일 덮어쓰지 않음 | `.new`로 저장. 설치가 남의 프로젝트를 깨면 안 된다. **v1.1 보완(사용자 승인 2026-10-13):** TANDEM이 깔았고 아무도 안 고친 파일(`tandem/manifest.json` 지문 일치)만 업데이트 때 교체. 이미 있는 `.new`도 덮어쓰지 않음 |
 | `CLAUDE.md`/`AGENTS.md`는 블록 삽입 | 기존 내용 보존. 재실행 시 블록만 갱신 |
 | 설치와 적응을 분리 | 스크립트는 파일만 놓고, 프로젝트 맞춤은 `/tandem`이 한다. 환경마다 모델 ID가 다르다 |
 | 실행 로그 JSONL | 여러 주체가 append 해도 안 깨진다. 배치표를 데이터로 고치는 근거 |
+| 모드 4가지 (claude-main, codex-main, claude-solo, codex-solo) | 프로젝트마다 대화 상대·실무 담당이 다르다. 메인은 지시·검수·보고만 |
+| 서브 호출은 래퍼(`codex-run`/`claude-run`)로만, 러너가 로그 기록 | farm-sim 실측: 전달책 폴링으로 위임 1회당 26-417 요청, Codex 실행 40% 로그 누락 |
+| `CLAUDE_CODE_SUBAGENT_MODEL=sonnet` (inherit 폐기) | 모델 미지정 서브에이전트가 메인의 비싼 모델로 돌았다 (실측 11%) |
+| 카파시 규칙 1-3 전원, 4는 서브에게만 (같은 실패 3회면 중단) | 메인이 직접 반복 수정하면 "메인은 실무 안 함" 원칙이 깨진다 |
+| Jev는 모델·강도 선택, 승급, 교차 검수 필요 여부만 | 이유를 안 주는 모델이다. 합격 판정·G1/G2는 맡기지 않는다. 키는 사용자 환경변수에만 |
+| 메인의 사용자 응대 최우선 규칙 3개 | 사용자 요구(2026-10-13): 선택 언어로 대답, 분기점 설명, 완료 보고는 간결 |
 
-## 검증된 것
+## 검증된 것 (v1.1, 2026-10-13, Windows PowerShell 5.1.19041)
 
-다음은 실제로 돌려서 확인했다.
-
-- 빈 git 저장소에 설치
-- 기존 `CLAUDE.md`, `.claude/settings.json`, 같은 이름 역할 파일이 있는 프로젝트에 설치
-- 재실행 멱등성 (블록 중복 안 생김, 로그 보존, config 보존)
-- `settings.json` 병합 시 기존 키(hooks 등) 보존
-- 비대화형 실행 (질문이 자동 거절로 처리되고 멈추지 않음)
-- `--skip-deps` 경로
-- 자리표시자 잔존 없음
-- `.gitignore`가 설치 결과물을 제외
+- 4개 모드 × 2개 언어를 빈 git 폴더에 설치: 모드별 파일 집합이 `files.json`과 일치, 자리표시자·`@@` 잔존 0, 결과 파일 BOM 0, JSON 유효, en에 한글 0
+- 기존 `CLAUDE.md`/`settings.json`(사용자 훅)/`.gitignore` 보존, 재실행 시 `.new` 0개, SessionStart 훅 중복 없음
+- 모드 전환(claude-main → codex-solo, → codex-main): 안 고친 전용 파일 삭제, 블록 제거(블록 밖 보존), 사용자가 고친 파일 보존, 비활성 모드 훅 정리
+- 실제 실행: `codex-run.ps1`(gpt-6-luna), `claude-run.ps1`(haiku) 한글 카드로 산출물 생성, runs.jsonl에 토큰·세션 자동 기록, 실패는 fail로 기록
+- `token-report.ps1` farm-sim 60일: 9초, 메인 평균 맥락 46만·서브 호출당 35요청 등 진단 6개 (수동 분석과 일치)
+- `check.ps1`: 알림 JSON(ASCII 이스케이프), 네트워크 실패 시 조용함, exit 0
+- R2 적대 검토(gpt-6-astra) 15개 지적 전부 반영 후 재검증 (설치기 C6a, 도구 C6b, 템플릿 C6c 각 보고서 `.work/`는 배포 안 함)
 
 ## 검증 안 된 것 (남은 일)
 
-- **실제 URL에서 한 줄 설치.** `boot.ps1`/`boot.sh`는 `carydev/Tandem`을 가리키게 돼 있지만
-  실제로 raw.githubusercontent 에서 받아 도는지는 푸시 후에 확인해야 한다.
-  **저장소 이름 대소문자가 중요하다. `Tandem`이지 `tandem`이 아니다.**
-- **Codex CLI 설치와 로그인 흐름.** `winget install OpenAI.Codex`, `codex login status` 기반인데
-  실제 환경에서 안 돌려봤다.
-- Windows PowerShell 5.1 에서의 동작. 스크립트는 UTF-8 BOM으로 저장돼 있어 한글이 깨지지 않아야 하지만
-  실제 확인은 안 했다.
+- **원격 업데이트 알림**: 푸시 후 `raw.githubusercontent.com/carydev/Tandem/main/VERSION`이 실제로 읽히는지
+- **Jev 실제 호출**: 키가 없어 `-DryRun`·키 없음·응답 검증 함수만 확인
+- **Codex 훅**: `.codex/hooks.json`은 프로젝트 신뢰 + `/hooks` 승인 후에만 돈다. 실제 Codex 세션에서 알림 표시 미확인
+- **Claude 훅 알림 표시**: settings 병합까지만 확인. 실제 세션 시작 화면 표시 미확인
+- `codex login` 브라우저 흐름, winget 설치 (v1.0부터 미검증)
+- `/tandem` 적응 전 과정을 실제 프로젝트에서 4개 모드로 돌려보기
 
 ## 진행 상황
 
@@ -100,12 +95,17 @@ HANDOFF.md                   이 파일
 - [x] 실제 URL로 한 줄 설치 검증 (2026-09-28). PS 5.1, 빈 git 폴더에서 `iwr ... | iex` 성공, 20개 배치
 - [ ] 저장소 description, topics 설정 - `gh`가 로그인 안 돼 있어 사람이 GitHub 웹에서 직접 넣는다
 - [ ] 릴리스 태그 `v1.0`
+- [x] **v1.1** (2026-10-13): 모드 4가지, 언어 선택(ko/en), 지문 기반 업데이트, 세션 시작 알림(새 버전·Jev 키),
+      Jev 선택 기능, `/tandem-tokens` 리포트와 다이어트 진단, 실행 래퍼(폴링 차단·자동 로그), 카파시 규칙, 사용자 응대 규칙
+      - TANDEM 방식으로 작업: Claude가 설계서·카드·검수, Codex가 구현 12회(C1-C8). Codex 입력 2,253만 중 97% 캐시, 출력 20만
+      - 승급 1회: C4 번역 gpt-6-luna 실패(구조만 복사) → gpt-6-sol 재시도 성공
+- [ ] v1.1 원격 검증: 한 줄 설치, 업데이트 알림 (위 "검증 안 된 것")
 
 방침: **Windows 전용으로 최적화한다.** `install.sh`/`boot.sh`는 남겨 두지만 검증과 개선 대상이 아니다.
 
 ## 지키면 좋을 것
 
-- **커밋은 사람이 한다.** 에이전트가 임의로 커밋하거나 푸시하지 않는다.
+- **커밋은 사람이 지시할 때만.** (2026-09-28부터 사용자가 커밋·푸시를 맡김)
 - 스크립트를 고쳤으면 빈 폴더와 기존 파일이 있는 폴더 양쪽에서 다시 돌려 본다.
 - 문서 문체: 결론 먼저, 짧고 직접적으로, 미사여구 없이. 범위는 하이픈(-)으로 표기.
 - 작업 문서는 한국어가 기본이다. README만 예외: `README.md`(영어, 기본)와 `README.ko.md`(한국어)를 함께 고친다.

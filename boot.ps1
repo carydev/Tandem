@@ -1,49 +1,33 @@
-<#
-  TANDEM remote bootstrap (Windows / PowerShell)
-
-  One-line install:
-    iwr -useb https://raw.githubusercontent.com/carydev/Tandem/main/boot.ps1 | iex
-
-  With options:
-    & ([scriptblock]::Create((iwr -useb https://raw.githubusercontent.com/carydev/Tandem/main/boot.ps1))) -DocsRoot docs/ops
-
-  Downloads the repo to a temp folder, runs install.ps1 against the current folder, cleans up.
-
-  Keep this file ASCII-only and saved WITHOUT a BOM.
-  A BOM breaks `iwr | iex` on Windows PowerShell 5.1 ("Unexpected attribute 'CmdletBinding'").
-#>
+<# TANDEM remote bootstrap. Keep this file ASCII without a BOM for iwr | iex. #>
 [CmdletBinding()]
 param(
-  [string]$DocsRoot = "docs/tandem",
-  [string]$Repo     = "carydev/Tandem",   # change this if you fork
-  [string]$Ref      = "main",             # branch or tag, e.g. v1.0
+  [string]$DocsRoot,
+  [ValidateSet('claude-main','codex-main','claude-solo','codex-solo')][string]$Mode,
+  [ValidateSet('ko','en')][string]$Lang,
+  [string]$JevKey,
+  [switch]$NoJev,
+  [string]$Repo = 'carydev/Tandem',
+  [string]$Ref = 'main',
   [switch]$SkipDeps,
   [switch]$Yes,
   [switch]$Force
 )
-
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = 'Stop'
 $target = (Get-Location).Path
-Write-Host ""
-Write-Host "Downloading TANDEM: $Repo@$Ref" -ForegroundColor Cyan
-
-$tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("tandem-" + [guid]::NewGuid().ToString("N").Substring(0,8))
-New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+$tempDir = Join-Path ([IO.Path]::GetTempPath()) ('tandem-' + [guid]::NewGuid().ToString('N'))
+[void][IO.Directory]::CreateDirectory($tempDir)
 try {
-  $zip = Join-Path $tmp "src.zip"
+  $zip = Join-Path $tempDir 'src.zip'
   Invoke-WebRequest -UseBasicParsing -Uri "https://codeload.github.com/$Repo/zip/$Ref" -OutFile $zip
-  Expand-Archive -Path $zip -DestinationPath $tmp -Force
-
-  $src = Get-ChildItem -Path $tmp -Directory | Where-Object { Test-Path (Join-Path $_.FullName "install.ps1") } | Select-Object -First 1
-  if (-not $src) { throw "install.ps1 not found in the downloaded archive." }
-
+  Expand-Archive -Path $zip -DestinationPath $tempDir -Force
+  $source = Get-ChildItem -Path $tempDir -Directory | Where-Object { Test-Path (Join-Path $_.FullName 'install.ps1') } | Select-Object -First 1
+  if (-not $source) { throw 'install.ps1 not found in downloaded archive.' }
+  $arguments = @{}
+  foreach ($name in @('DocsRoot','Mode','Lang','JevKey','NoJev','SkipDeps','Yes','Force')) {
+    if ($PSBoundParameters.ContainsKey($name)) { $arguments[$name] = $PSBoundParameters[$name] }
+  }
   Push-Location $target
-  try {
-    $a = @{ DocsRoot = $DocsRoot }
-    if ($SkipDeps) { $a.SkipDeps = $true }
-    if ($Yes)      { $a.Yes      = $true }
-    if ($Force)    { $a.Force    = $true }
-    & (Join-Path $src.FullName "install.ps1") @a
-  } finally { Pop-Location }
+  try { & (Join-Path $source.FullName 'install.ps1') @arguments }
+  finally { Pop-Location }
 }
-finally { Remove-Item -Path $tmp -Recurse -Force -ErrorAction SilentlyContinue }
+finally { Remove-Item -LiteralPath $tempDir -Recurse -Force -ErrorAction SilentlyContinue }

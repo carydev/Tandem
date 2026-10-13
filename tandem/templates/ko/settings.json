@@ -1,0 +1,11 @@
+{
+  "env": {"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "0", "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"},
+  "permissions": {"allow": [
+    "Read", "WebSearch",
+    "Edit({{DOCS}}/tasks/**)", "Edit({{DOCS}}/briefings/**)",
+    "Edit({{DOCS}}/reports/**)", "Edit({{DOCS}}/log/**)",
+    "Bash(codex --version)", "Bash(codex exec --help)",
+    "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)",
+    "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/*)"
+  ]}
+}

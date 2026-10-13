@@ -2,219 +2,135 @@
 
 **English** | [한국어](README.ko.md)
 
-**Claude directs. Codex does the work.**
-TANDEM is an agent harness you drop into any project. Claude plans, reviews and reports.
-A Codex team does the heavy research and writing on your Codex plan.
+**Choose the lead; agents do the work.** TANDEM installs task cards, review rules, and run logs in your project. Claude or Codex can lead; the lead directs, reviews, and reports while workers implement.
 
 ```powershell
 iwr -useb https://raw.githubusercontent.com/carydev/Tandem/main/boot.ps1 | iex
 ```
 
-Then run `claude` and type `/tandem`. That's it.
-
-> The name comes from a tandem bicycle: the front rider steers, the back rider pedals harder.
-> Claude steers, Codex supplies the power.
-
----
+Use `-Mode` to choose a mode and `-Lang ko` or `-Lang en` to choose the language. The default mode is `claude-main`.
 
 ## Why
 
-- **One Claude call runs a whole Codex team.** Codex spawns its own sub-workers.
-  However many workers run inside Codex, Claude usage does not grow.
-- **Heavy work moves to your Codex plan.** Claude only instructs, reviews and reports.
-- **Output never floods Claude's context.** Codex writes results to files.
-  Claude gets back a path and a 5-line summary.
-- **The reviewer is a different model.** Proposal → adversarial review (other model, separate session) → response.
-  Same-model debates agree too fast.
+- The lead gets file paths and summaries of at most five lines, not entire worker outputs.
+- G1 confirms the task definition; G2 briefs you on the result. Agents do not decide these gates.
+- Task cards, a three-round discussion with another model in R2, and `runs.jsonl` keep work traceable.
+- Model routing starts at a suitable lower tier and escalates when needed.
 
 ## Requirements
 
-- [Claude Code](https://claude.com/claude-code) CLI
-- [Codex CLI](https://github.com/openai/codex) with a logged-in account. **TANDEM does not work without Codex.**
-  The installer offers to install it and run `codex login` if missing.
-- A git repository (recommended - it is your undo button)
+- Windows with Windows PowerShell 5.1 or later and git.
+- [Claude Code](https://claude.com/claude-code) CLI for modes involving Claude; [Codex CLI](https://github.com/openai/codex) and a logged-in account for modes involving Codex. The installer checks dependencies for your mode.
+- macOS/Linux scripts remain from v1.0 but are unsupported in v1.1.
 
 ## Quick start
 
-Run in the **root of the project** you want to install into.
-
-**Windows (PowerShell)**
+Run in the root of the project you want to set up:
 
 ```powershell
-iwr -useb https://raw.githubusercontent.com/carydev/Tandem/main/boot.ps1 | iex
+& ([scriptblock]::Create((iwr -useb https://raw.githubusercontent.com/carydev/Tandem/main/boot.ps1))) -Mode claude-main -Lang en
 ```
 
-**macOS / Linux / WSL**
+In `claude-main` or `claude-solo`, run `claude`, then `/tandem`. In `codex-main` or `codex-solo`, run `codex` and ask it to read `tandem/adapt.md` and adapt TANDEM. Adaptation checks models, CLI flags, project docs, and a smoke test. Review its report; you make the commit. In Codex modes, trust the project and approve the session hook through `/hooks`.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/carydev/Tandem/main/boot.sh | bash
-```
-
-Then adapt it to your project:
-
-```
-claude
-/tandem
-```
-
-`/tandem` checks your environment (real Codex model IDs, CLI flags), fits TANDEM to your existing docs and ID scheme,
-runs a smoke test, reports, and stops. **You commit.**
-
-Start working with the lead session:
-
-```powershell
-claude --append-system-prompt-file ./docs/tandem/lead-charter.md
-```
-
-```
-<describe the task>
-Ask clarifying questions first. Proceed after G1 approval.
-```
-
-Check status from any session with `/tandem-status`.
-
-> **Note:** the installed role files and operating docs are currently written in Korean.
-> Claude and Codex read them fine. An English template set is not included yet.
+Describe the task to the lead. It asks for G1 confirmation, delegates implementation, and gives you the G2 briefing. Run the same install command again to update or switch modes; pass another `-Mode` or `-Lang` to change them.
 
 ## How it works
 
-```
-You                     decisions, direction
- │
-Claude lead             intent, final verdict, report       [Claude plan]
- │
-Claude manager          task breakdown, task cards, review  [Claude plan]
- │
-Claude dispatcher       calls codex exec, writes the log    [Claude plan, tiny]
- │
-Codex work lead         forms the team, design calls        [Codex plan]
- ├ research worker  (light model)
- ├ design worker    (mid-upper model)
- ├ build worker     (light model)
- └ adversarial review (separate session, different model)
+| Mode | You talk to | Who does the work |
+|---|---|---|
+| `claude-main` | Claude lead | Codex team through a Claude manager and dispatcher |
+| `codex-main` | Codex lead | Claude worker called with `claude -p` |
+| `claude-solo` | Claude lead | Lower-tier Claude agents through the Agent tool |
+| `codex-solo` | Codex lead | Native Codex subagents |
 
-Claude critic           only for hard-to-reverse decisions  [Claude plan, rare]
-```
+The lead defines and checks work. Workers write files. G1 confirms scope before delegation; R1 proposes, R2 reviews with another model, R3 responds; G2 briefs you.
 
-Flow: task → clarifying questions → **G1** (you confirm the task) → Codex team runs → review →
-**G2** (briefing to you) → approved changes applied. Nothing passes a gate without your answer.
+### What you get
 
-## What you get
-
-| Feature | What it does |
+| Feature | Purpose |
 |---|---|
-| **Model routing table** | Which model and reasoning effort per job. Start one level lower, escalate only on failure |
-| **Approval gates** | G1 task definition, G2 briefing. No human approval, no next step |
-| **Task cards** | Codex can't see the chat. Context goes to it as a file |
-| **3-round debate** | Proposal → adversarial review → response. Unresolved points stay recorded as open issues |
-| **Run log** | One line per call in `runs.jsonl`: model, effort, pass/fail, escalation |
-| **Self-tuning** | The manager aggregates the log and proposes routing changes. Data, not guesses |
-| **Harness status** | One file tells you version, active roles, confirmed models, environment |
-| **File ownership** | Who may edit which doc is fixed. Agents don't overwrite each other |
+| Routing table | Choose model and reasoning effort, then record escalation |
+| Task cards and G1/G2 | Define scope and keep confirmation and briefing with you |
+| Three-round discussion | Record objections and unresolved issues |
+| Run log and token report | Track calls and detect costly patterns |
+| Operating docs | Keep roles, ownership, routing, and status in one place |
 
-### Good fit
+### Working rules
 
-- Research- and writing-heavy projects that burn through Claude quota
-- Work where decisions, evidence and objections must be on record
-- Solo developers who need a reviewer
-- Long work spanning many sessions
+All roles clarify assumptions, keep solutions simple, and edit only what the task needs. Workers set verifiable completion checks and repeat until they pass; after the same failure three times, they stop and record the block. These rules paraphrase [a community collection of Andrej Karpathy's observations](https://github.com/forrestchang/andrej-karpathy-skills), not a repository maintained by Karpathy.
 
-### Not a fit
+Execution wrappers wait without repeated polling and log calls automatically. Unspecified Claude subagents default to `sonnet` through `CLAUDE_CODE_SUBAGENT_MODEL`. Session rules keep related work together and start a new session for unrelated work; efficiency rules limit reading and test output to what the task needs.
 
-- Short one-shot tasks - the hierarchy makes them slower
-- Environments without Codex CLI
-- Interactive work that needs instant answers
+### Jev (optional)
 
----
+Jev is TypeSafe's decision-only model through OpenRouter. It can choose a model and reasoning effort, whether to escalate, and whether cross-review is needed. It does **not** judge artifact acceptance or decide G1/G2. Without a key, TANDEM uses its v1.0 routing table.
+
+Store an OpenRouter key only in the **user** environment variable `TANDEM_JEV_API_KEY`, or enter it interactively during installation. When Jev is used, **the objective, constraints, and completion-conditions sections of a task card, up to 6,000 characters, are sent to OpenRouter/TypeSafe**. The key is not written to project files. `-JevKey` is available, but command history may retain its argument; interactive entry is recommended.
+
+### Token report
+
+Run `/tandem-tokens` in a Claude lead session, or run `tandem/tools/token-report.ps1` in PowerShell. It groups Claude and Codex use by role and model and suggests ways to reduce waste. For example, it can reveal 460,000 average context tokens per lead request or 35 requests per dispatcher call.
 
 ## Install details
 
 ### Run from a download
 
-Cloned or unzipped? Call the script from **your project root**:
+From your project root, call the downloaded script:
 
 ```powershell
-path\to\Tandem\install.ps1
-```
-
-```bash
-path/to/Tandem/install.sh
+path\to\Tandem\install.ps1 -Mode codex-main -Lang en
 ```
 
 ### Options
 
-| Option (PowerShell / bash) | Meaning |
+| Option | Meaning |
 |---|---|
-| `-DocsRoot <path>` / `[path]` | Operating docs folder. Default `docs/tandem` |
-| `-SkipDeps` / `--skip-deps` | Skip Codex install and login checks |
-| `-Yes` / `-y` | Don't ask. For unattended runs |
-| `-Force` (PowerShell only) | Re-place templates even if already installed |
+| `-DocsRoot <path>` | Operating docs directory; default `docs/tandem` |
+| `-Mode <mode>` | One of the four modes above; re-run to switch |
+| `-Lang ko\|en` | Language for conversation, docs, and guidance |
+| `-JevKey <key>` | OpenRouter key; prefer interactive entry because command history may retain it |
+| `-NoJev` | Skip the optional key prompt |
+| `-SkipDeps` | Skip dependency and login checks |
+| `-Yes` | Use defaults without prompts |
+| `-Force` | Re-run placement; user-edited files still go to `.new` |
 
-With the one-liner:
-
-```powershell
-& ([scriptblock]::Create((iwr -useb https://raw.githubusercontent.com/carydev/Tandem/main/boot.ps1))) -DocsRoot docs/ops
-```
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/carydev/Tandem/main/boot.sh | bash -s -- docs/ops
-```
+Use the `scriptblock` form in Quick start to pass options to the one-line installer.
 
 ### What the installer does
 
-1. Checks git, `claude`, and **installs / logs in `codex`** if you agree
-   (`winget install OpenAI.Codex` on Windows, `brew install --cask codex` on macOS, else `npm install -g @openai/codex`)
-2. Detects the project name (git remote or folder name)
-3. Places role files, slash commands, Codex config, operating docs
-4. Inserts a TANDEM block into `CLAUDE.md` / `AGENTS.md` (existing content kept)
-5. Merges `.claude/settings.json` (existing settings kept)
-6. Adds `.codex-last/` to `.gitignore`
-7. Writes `tandem/config.json`
+1. Selects mode and language, checks required CLIs, and offers Codex setup when needed.
+2. Places mode-specific roles and commands, shared operating docs, and tools.
+3. Inserts applicable TANDEM blocks into `CLAUDE.md` and `AGENTS.md` and merges settings and hooks.
+4. Writes `tandem/config.json` and `tandem/manifest.json`; adds cache and run-output paths to `.gitignore`.
 
-**It never overwrites your files.** On conflict it saves `<file>.new` and tells you. Safe to re-run.
+On update, unchanged TANDEM-owned files are replaced automatically. User-edited files stay in place and the new version goes to `<file>.new`. Session-start hooks can announce a newer version and a missing Jev key. Codex hooks require project trust and `/hooks` approval.
 
 ### What gets installed
 
-```
-.claude/
-  agents/tandem-manager.md      manager
-  agents/tandem-dispatch.md     dispatcher
-  agents/tandem-critic.md       critic
-  commands/tandem.md            /tandem
-  commands/tandem-status.md     /tandem-status
-  settings.json                 merged
-.codex/
-  config.toml                   4 profiles
-  agents/*.toml                 work lead, researcher, implementer, reviewer
-docs/tandem/                    (configurable)
-  harness-status.md             current state - read first each session
-  lead-charter.md               lead-only rules
-  model-routing.md              model routing and escalation
-  delegation.md                 delegation, cost rules, pitfalls
-  operating-model.md            org, flow, file ownership
-  log/runs.jsonl                run log
-  tasks/ briefings/ reports/    work output
-CLAUDE.md                       TANDEM block inserted
-AGENTS.md                       TANDEM block inserted
-tandem/
-  adapt.md                      instructions read by /tandem
-  config.json                   project settings
-```
+| Scope | Files |
+|---|---|
+| All modes | `docs/tandem/` (or `-DocsRoot`), `tandem/adapt.md`, `tandem/config.json`, `tandem/manifest.json`, shared scripts in `tandem/tools/` |
+| `claude-main` | Claude manager, dispatcher, critic, and commands; Codex work lead and agents; Claude settings and project instruction blocks |
+| `codex-main` | Codex configuration and hook; Claude worker doc and settings; `tandem/tools/claude-run.ps1` |
+| `claude-solo` | Claude lead, critic, top/mid/light agents and commands; Claude settings |
+| `codex-solo` | Codex configuration, researcher/implementer/reviewer agents and hook; `tandem/tools/codex-run.ps1` |
+
+The file set follows the mode. Shared tools cover checks, Jev, manifests, and token reporting; execution wrappers are installed where used.
 
 ## Undo
 
-Revert the install commit. Your original files were never overwritten - conflicts went to `.new`.
+Revert your install commit. Review any `.new` files and user edits separately.
 
 ## Good to know
 
-- **Agent Teams is turned off.** Its members are all Claude, which is expensive. Codex does the work here.
-- **Some Codex versions block choosing a sub-worker's model.** That is why adversarial review runs as a separate session.
-- **Codex quota becomes the new bottleneck.** The run log tracks usage.
-- **Top-tier models may be disabled by default on some accounts.** `/tandem` checks and adjusts routing.
+- A global Codex `service_tier` of `fast` or `priority` can consume limits 2.5 times faster. TANDEM does not change global settings; `/tandem` and the token report flag this.
+- Codex session hooks require project trust and `/hooks` approval.
+- In an untrusted folder, `claude -p` ignores settings permissions. The Claude wrapper passes needed permissions with `--allowedTools`.
 
 ## Fork and publish your own
 
-Fork, then replace `carydev/Tandem` in `boot.ps1` and `boot.sh` with your repo. See [PUBLISH.md](PUBLISH.md) (Korean).
+Replace `carydev/Tandem` in `boot.ps1` and install examples with your repository. See [PUBLISH.md](PUBLISH.md).
 
 ## License
 

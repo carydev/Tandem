@@ -1,143 +1,57 @@
-# 배포하기
+# TANDEM v1.1 배포하기
 
-이 저장소는 `carydev/Tandem`으로 배포된다. 부트스트랩과 문서에 그 주소가 이미 박혀 있다.
-**포크해서 본인 것으로 쓸 사람**은 아래 1-2단계를 따르고, carydev 본인이면 3단계부터 보면 된다.
+이 저장소의 설치 명령은 `carydev/Tandem`을 가리킨다. v1.1 설치 대상은 Windows PowerShell 5.1 이상이다. macOS/Linux 스크립트는 v1.0 상태로 남아 있지만 지원하지 않는다.
 
-## 1. 저장소 만들기 (포크하는 경우)
+## 1. 포크 저장소 준비
 
-깃헙에서 새 저장소를 만든다.
-**공개(public)로 만들어야** 한 줄 설치가 된다. 비공개면 받는 쪽도 인증이 필요해서 `gh` CLI를 써야 한다.
+한 줄 설치를 공개 배포하려면 저장소를 public으로 만든다. 비공개 저장소에는 별도 인증이 필요하다.
 
-## 2. 저장소 주소 바꾸기 (포크하는 경우)
+`boot.ps1`의 기본 `$Repo`와 `README.md`, `README.ko.md`, `QUICKSTART.txt`의 설치 URL에서 `carydev/Tandem`을 본인 저장소로 바꾼다. 저장소 이름의 대소문자를 URL과 일치시킨다. `boot.sh`는 v1.0 호환용으로만 남으며 v1.1 배포 경로에 포함하지 않는다.
 
-`boot.ps1`의 `$Repo`, `boot.sh`의 `REPO`, 그리고 `README.md` / `README.ko.md` / `QUICKSTART.txt`의 설치 명령에서
-`carydev/Tandem`을 본인 것으로 바꾼다.
+## 2. 버전과 업데이트 알림
 
-**저장소 이름은 대소문자를 구분한다.** raw.githubusercontent URL이 그대로 타기 때문이다.
+배포 전에 루트의 `VERSION` 파일을 릴리스 버전(예: `1.1`)으로 갱신한다. 설치기는 이 파일로 설치 버전을 정하고, 설치된 `tandem/tools/check.ps1`은 원격 저장소의 `VERSION`을 확인해 새 버전을 세션 시작 시 알린다. **`VERSION`을 갱신하지 않으면 업데이트 알림도 새 릴리스를 구분하지 못한다.**
 
-## 3. 올리기
+업데이트를 받을 사용자는 설치 때 썼던 Windows 한 줄 명령을 다시 실행한다. 고치지 않은 TANDEM 파일은 자동 교체되고, 사용자가 고친 파일의 새 버전은 `.new`에 놓인다. Codex의 세션 알림 훅은 프로젝트 신뢰와 `/hooks` 승인이 필요하다.
+
+## 3. 배포
+
+변경 파일과 `VERSION`을 함께 검토하고 저장소에 게시한다. 릴리스 태그 예시는 `v1.1`이다. 이미 git 저장소라면 `git init`이나 `git remote add`를 반복하지 않는다.
 
 ```powershell
+git tag v1.1
+git push origin main v1.1
+```
+
+릴리스 zip을 제공할 경우 같은 버전 이름으로 만든다. 예:
+
+```powershell
+gh release create v1.1 tandem-v1.1.zip --title "TANDEM v1.1" --notes "Windows v1.1"
+```
+
+## 4. 설치 확인
+
+빈 Windows 테스트 프로젝트에서 공개한 한 줄 명령을 실행한다. 기존 `CLAUDE.md`나 `AGENTS.md`가 있는 프로젝트에서도 TANDEM 블록이 원본 밖 내용을 보존하는지 확인한다.
+
+```powershell
+mkdir test-proj
+cd test-proj
 git init
-git add .
-git commit -m "TANDEM v1.0"
-git branch -M main
-git remote add origin https://github.com/carydev/Tandem.git
-git push -u origin main
-```
-
-## 4. 확인
-
-다른 폴더에서 실제로 한 줄 설치가 되는지 본다.
-
-```powershell
-mkdir test-proj; cd test-proj; git init
 iwr -useb https://raw.githubusercontent.com/carydev/Tandem/main/boot.ps1 | iex
 ```
 
----
-
-## 쓰는 사람 입장에서의 설치 방법 세 가지
-
-저장소 README에 이 셋 중 원하는 걸 안내한다.
-
-### A. 한 줄 (가장 간단)
+모드와 언어를 지정하려면:
 
 ```powershell
-iwr -useb https://raw.githubusercontent.com/carydev/Tandem/main/boot.ps1 | iex
+& ([scriptblock]::Create((iwr -useb https://raw.githubusercontent.com/carydev/Tandem/main/boot.ps1))) -Mode codex-main -Lang ko
 ```
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/carydev/Tandem/main/boot.sh | bash
-```
-
-옵션을 주려면:
-
-```powershell
-& ([scriptblock]::Create((iwr -useb https://raw.githubusercontent.com/carydev/Tandem/main/boot.ps1))) -DocsRoot docs/ops
-```
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/carydev/Tandem/main/boot.sh | bash -s -- docs/ops
-```
-
-**주의**: 인터넷에서 받은 스크립트를 바로 실행하는 방식이다. 편하지만 받는 쪽이 내용을 못 보고 돌린다.
-팀이나 회사에 배포한다면 B나 C를 권하는 편이 낫다.
-
-### B. 클론 후 실행 (내용을 보고 돌린다)
-
-```powershell
-git clone https://github.com/carydev/Tandem.git
-cd <설치할-프로젝트>
-..\<REPO>\install.ps1
-```
-
-### C. 릴리스 zip
-
-깃헙 Releases에 zip을 올려 두면 클론 없이 받을 수 있다.
-
-```powershell
-gh release create v1.0 tandem-v1.0.zip --title "TANDEM v1.0" --notes "초기 배포"
-```
-
-받는 쪽:
-
-```powershell
-iwr https://github.com/carydev/Tandem/releases/download/v1.0/tandem-v1.0.zip -OutFile t.zip
-Expand-Archive t.zip -DestinationPath tandem-kit
-.\tandem-kit\install.ps1
-```
-
----
-
-## 더 나아가려면
-
-### 버전 태그
-
-`boot.sh`와 `boot.ps1`은 브랜치 대신 태그도 받는다. 안정판을 고정해서 쓰게 할 수 있다.
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/carydev/Tandem/v1.0/boot.sh | TANDEM_REF=v1.0 bash
-```
-
-```powershell
-& ([scriptblock]::Create((iwr -useb https://raw.githubusercontent.com/carydev/Tandem/v1.0/boot.ps1))) -Ref v1.0
-```
-
-### npx 로 배포
-
-`package.json`을 만들고 npm에 올리면 이렇게 된다.
-
-```bash
-npx <패키지명>
-```
-
-`bin` 필드에 install 스크립트를 연결하면 된다. npm 계정과 배포 과정이 추가로 필요하다.
-
-### Claude Code 플러그인
-
-Claude Code는 플러그인 마켓플레이스를 지원한다. 저장소를 플러그인 형식으로 맞추면
-`/plugin` 으로 설치하게 만들 수 있다. 역할과 커맨드는 이미 `.claude/` 구조라 옮기기 쉽다.
-다만 TANDEM은 `.codex/`와 운영 문서도 같이 깔아야 해서 설치 스크립트가 여전히 필요하다.
-
-### 비공개 저장소로 배포
-
-조직 내부용이면 비공개로 두고 `gh` CLI를 쓴다.
-
-```bash
-gh repo clone carydev/Tandem /tmp/tandem && /tmp/tandem/install.sh
-```
-
-받는 쪽이 저장소 접근 권한과 `gh` 로그인을 갖고 있어야 한다.
-
----
+실제 설치 후 `tandem/config.json`의 모드·언어, `tandem/manifest.json`의 지문, 모드별 파일 배치를 확인한다. 같은 명령을 다시 실행해 업데이트 경로도 점검한다.
 
 ## 배포 전 점검
 
-- [ ] (포크한 경우) `boot.ps1`, `boot.sh`, `README.md`, `README.ko.md`, `QUICKSTART.txt` 의 저장소 주소 교체
-- [ ] 저장소 이름 대소문자가 URL과 정확히 일치하는지
-- [ ] 빈 폴더에서 한 줄 설치 실제로 해보기
-- [ ] 기존 `CLAUDE.md`가 있는 프로젝트에서도 해보기 (블록 추가되는지)
-- [ ] (포크한 경우) `LICENSE` 의 저작권자 이름 바꾸기
-- [ ] `.gitignore` 확인. 설치 결과물(`docs/tandem/`, `tandem/config.json`)이 안 올라가게
-- [ ] README 의 스크린샷이나 예시에 개인 정보가 없는지
+- [ ] `VERSION`과 릴리스 태그가 같은 버전을 가리킨다.
+- [ ] 포크라면 `boot.ps1`과 세 문서의 저장소 주소를 바꿨다.
+- [ ] Windows 빈 프로젝트와 기존 지시 파일이 있는 프로젝트에서 설치했다.
+- [ ] 업데이트 시 사용자 수정 파일이 보존되고 `.new`가 만들어지는지 확인했다.
+- [ ] `LICENSE`와 예시에 개인 정보가 없는지 확인했다.

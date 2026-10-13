@@ -1,0 +1,44 @@
+{
+  "_comment": "TANDEM file contract. src is relative to tandem/templates/<lang>/ (render) or to the repo root (copy). modes: claude-main | codex-main | claude-solo | codex-solo. kind: file | block | settings | codex-hooks | copy",
+  "files": [
+    { "src": "claude/agents/tandem-manager.md",     "dst": ".claude/agents/tandem-manager.md",     "kind": "file", "modes": ["claude-main"] },
+    { "src": "claude/agents/tandem-dispatch.md",    "dst": ".claude/agents/tandem-dispatch.md",    "kind": "file", "modes": ["claude-main"] },
+    { "src": "claude/agents/tandem-critic.md",      "dst": ".claude/agents/tandem-critic.md",      "kind": "file", "modes": ["claude-main", "claude-solo"] },
+    { "src": "claude/agents/tandem-worker-top.md",  "dst": ".claude/agents/tandem-worker-top.md",  "kind": "file", "modes": ["claude-solo"] },
+    { "src": "claude/agents/tandem-worker-mid.md",  "dst": ".claude/agents/tandem-worker-mid.md",  "kind": "file", "modes": ["claude-solo"] },
+    { "src": "claude/agents/tandem-worker-light.md","dst": ".claude/agents/tandem-worker-light.md","kind": "file", "modes": ["claude-solo"] },
+    { "src": "claude/commands/tandem.md",           "dst": ".claude/commands/tandem.md",           "kind": "file", "modes": ["claude-main", "claude-solo"] },
+    { "src": "claude/commands/tandem-status.md",    "dst": ".claude/commands/tandem-status.md",    "kind": "file", "modes": ["claude-main", "claude-solo"] },
+    { "src": "claude/commands/tandem-tokens.md",    "dst": ".claude/commands/tandem-tokens.md",    "kind": "file", "modes": ["claude-main", "claude-solo"] },
+
+    { "src": "codex/config.toml",                   "dst": ".codex/config.toml",                   "kind": "file", "modes": ["claude-main", "codex-main", "codex-solo"] },
+    { "src": "codex/agents/work-lead.toml",         "dst": ".codex/agents/work-lead.toml",         "kind": "file", "modes": ["claude-main"] },
+    { "src": "codex/agents/researcher.toml",        "dst": ".codex/agents/researcher.toml",        "kind": "file", "modes": ["claude-main", "codex-solo"] },
+    { "src": "codex/agents/implementer.toml",       "dst": ".codex/agents/implementer.toml",       "kind": "file", "modes": ["claude-main", "codex-solo"] },
+    { "src": "codex/agents/reviewer.toml",          "dst": ".codex/agents/reviewer.toml",          "kind": "file", "modes": ["claude-main", "codex-solo"] },
+    { "src": "codex/hooks.json",                    "dst": ".codex/hooks.json",                    "kind": "codex-hooks", "modes": ["codex-main", "codex-solo"] },
+
+    { "src": "docs/lead-charter.md",                "dst": "{{DOCS}}/lead-charter.md",             "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
+    { "src": "docs/model-routing.md",               "dst": "{{DOCS}}/model-routing.md",            "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
+    { "src": "docs/delegation.md",                  "dst": "{{DOCS}}/delegation.md",               "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
+    { "src": "docs/operating-model.md",             "dst": "{{DOCS}}/operating-model.md",          "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
+    { "src": "docs/harness-status.md",              "dst": "{{DOCS}}/harness-status.md",           "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
+    { "src": "docs/claude-worker.md",               "dst": "{{DOCS}}/claude-worker.md",            "kind": "file", "modes": ["codex-main"] },
+    { "src": "docs/log/README.md",                  "dst": "{{DOCS}}/log/README.md",               "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
+    { "src": "docs/reports/README.md",              "dst": "{{DOCS}}/reports/README.md",           "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
+    { "src": "docs/tasks/README.md",                "dst": "{{DOCS}}/tasks/README.md",             "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
+    { "src": "docs/briefings/README.md",            "dst": "{{DOCS}}/briefings/README.md",         "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
+    { "src": "adapt.md",                            "dst": "tandem/adapt.md",                      "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
+
+    { "src": "blocks/CLAUDE.md",                    "dst": "CLAUDE.md",                            "kind": "block", "modes": ["claude-main", "codex-main", "claude-solo"] },
+    { "src": "blocks/AGENTS.md",                    "dst": "AGENTS.md",                            "kind": "block", "modes": ["claude-main", "codex-main", "codex-solo"] },
+    { "src": "settings.json",                       "dst": ".claude/settings.json",                "kind": "settings", "modes": ["claude-main", "codex-main", "claude-solo"] },
+
+    { "src": "tandem/tools/check.ps1",              "dst": "tandem/tools/check.ps1",               "kind": "copy", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
+    { "src": "tandem/tools/token-report.ps1",       "dst": "tandem/tools/token-report.ps1",        "kind": "copy", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
+    { "src": "tandem/tools/jev.ps1",                "dst": "tandem/tools/jev.ps1",                 "kind": "copy", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
+    { "src": "tandem/tools/manifest.ps1",           "dst": "tandem/tools/manifest.ps1",            "kind": "copy", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
+    { "src": "tandem/tools/codex-run.ps1",          "dst": "tandem/tools/codex-run.ps1",           "kind": "copy", "modes": ["claude-main", "codex-solo"] },
+    { "src": "tandem/tools/claude-run.ps1",         "dst": "tandem/tools/claude-run.ps1",          "kind": "copy", "modes": ["codex-main"] }
+  ]
+}

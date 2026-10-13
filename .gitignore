@@ -6,3 +6,10 @@ docs/tandem/
 tandem/config.json
 .DS_Store
 Thumbs.db
+
+# 작업 공간 (배포 안 함)
+.work/
+.serena/
+tandem/.cache/
+tandem/manifest.json
+tandem/.cache/

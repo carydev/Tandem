@@ -1,326 +1,428 @@
 ﻿<#
 .SYNOPSIS
-  TANDEM - Claude 지휘 + Codex 실무 에이전트 하네스를 현재 프로젝트에 설치한다.
-.DESCRIPTION
-  파일을 배치하고 슬래시 커맨드를 등록한다. 기존 파일은 덮어쓰지 않고 .new 로 남긴다.
-  설치 후 Claude Code 에서 /tandem 을 실행해 프로젝트에 맞게 적응시킨다.
-.PARAMETER DocsRoot
-  운영 문서를 둘 폴더. 기본값 docs/tandem
-.PARAMETER Force
-  이미 설치돼 있어도 템플릿을 다시 배치한다. 기존 파일은 여전히 .new 로 간다.
-.PARAMETER SkipDeps
-  Codex CLI 설치와 로그인 확인을 건너뛴다.
-.PARAMETER Yes
-  설치 여부를 묻지 않고 진행한다. 무인 실행용.
-.EXAMPLE
-  .\install.ps1
-.EXAMPLE
-  .\install.ps1 -DocsRoot docs/ops
+  TANDEM v1.1 installer. Run from the project directory.
+.PARAMETER JevKey
+  May remain in command history; interactive input is recommended.
+  명령 기록에 남을 수 있으니 대화형 입력을 권장합니다.
 #>
 [CmdletBinding()]
 param(
-  [string]$DocsRoot = "docs/tandem",
-  [switch]$Force,
+  [string]$DocsRoot,
+  [ValidateSet('claude-main','codex-main','claude-solo','codex-solo')][string]$Mode,
+  [ValidateSet('ko','en')][string]$Lang,
+  [string]$JevKey,
+  [switch]$NoJev,
   [switch]$SkipDeps,
-  [switch]$Yes
+  [switch]$Yes,
+  [switch]$Force,
+  [string]$TemplateRoot
 )
-
-$ErrorActionPreference = "Stop"
-$VERSION = "1.0"
-
-function Say([string]$m, [string]$c = "Gray") { Write-Host $m -ForegroundColor $c }
-function Ok ([string]$m) { Write-Host "  [OK] $m" -ForegroundColor Green }
-function Warn([string]$m) { Write-Host "  [!]  $m" -ForegroundColor Yellow }
-function Bad ([string]$m) { Write-Host "  [X]  $m" -ForegroundColor Red }
-
-$here = Split-Path -Parent $MyInvocation.MyCommand.Path
-$tpl  = Join-Path $here "tandem\templates"
-if (-not (Test-Path $tpl)) { Bad "tandem\templates 를 찾을 수 없다. 압축을 푼 폴더에서 실행해라."; exit 1 }
-
+$ErrorActionPreference = 'Stop'
+$sourceRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $root = (Get-Location).Path
-Say ""
-Say "TANDEM v$VERSION" Cyan
-Say "설치 위치: $root"
-Say ""
-
-# ── 환경 점검 ────────────────────────────────
-Say "환경 점검" Cyan
-$isGit = $false
-try { git rev-parse --is-inside-work-tree 2>$null | Out-Null; $isGit = ($LASTEXITCODE -eq 0) } catch {}
-if ($isGit) {
-  Ok "git 저장소"
-  $dirty = git status --porcelain
-  if ($dirty) { Warn "커밋 안 된 변경이 있다. 설치 전에 커밋해 두면 되돌리기 쉽다." }
-} else {
-  Warn "git 저장소가 아니다. 되돌리기 수단이 없으니 주의해라."
+$version = [IO.File]::ReadAllText((Join-Path $sourceRoot 'VERSION')).Trim()
+$utf8 = New-Object Text.UTF8Encoding($false)
+$strictUtf8 = New-Object Text.UTF8Encoding($false,$true)
+$today = Get-Date -Format 'yyyy-MM-dd'
+$messages = @{
+  ko = @{ done='설치 완료'; unchanged='변경 없음'; added='배치'; replaced='교체'; preserved='사용자 수정 보존, .new 생성'; removed='제거'; warning='경고'; missing='소스 파일 없음'; parse='JSON 파싱 실패, .new 생성'; jevPrompt='Jev(OpenRouter) API 키 (Enter로 건너뜀)'; jevWarning='-JevKey 값은 명령 기록에 남을 수 있으니 대화형 입력을 권장합니다.'; newConflict='.new 가 이미 있고 내용이 다름 — 병합 후 지워라'; encoding='UTF-8 디코딩 실패, 원본 보존'; invalidPath='manifest 삭제 경로 거부'; installCodex='Codex CLI를 지금 설치할까? [y/N]'; nextClaude='다음: claude 실행 후 /tandem 입력'; nextCodex='다음: codex 실행 후 tandem/adapt.md를 읽고 적응 진행. /hooks에서 훅 승인' }
+  en = @{ done='Installation complete'; unchanged='No changes'; added='Installed'; replaced='Replaced'; preserved='User edit preserved; wrote .new'; removed='Removed'; warning='Warning'; missing='Missing source file'; parse='Invalid JSON; wrote .new'; jevPrompt='Jev (OpenRouter) API key (Enter to skip)'; jevWarning='-JevKey may remain in command history; interactive input is recommended.'; newConflict='.new already exists with different content — merge and delete it'; encoding='UTF-8 decoding failed; original preserved'; invalidPath='Refused manifest deletion path'; installCodex='Install Codex CLI now? [y/N]'; nextClaude='Next: run claude, then /tandem'; nextCodex='Next: run codex and follow tandem/adapt.md. Approve hooks with /hooks' }
 }
-
-function Ask([string]$q) {
-  if ($Yes) { return $true }
-  $a = Read-Host "  $q [Y/n]"
-  return ($a -eq "" -or $a -match '^[Yy]')
+function Native([scriptblock]$body) {
+  $old = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+  try { & $body } finally { $ErrorActionPreference = $old }
 }
-function Has([string]$c) { return [bool](Get-Command $c -ErrorAction SilentlyContinue) }
-# 외부 명령 실행. codex 등은 정상 출력도 stderr 로 내보내는데, 5.1 은 Stop 상태에서 이를 오류로 보고 멈춘다.
-function Native([scriptblock]$b) {
-  $prev = $ErrorActionPreference; $ErrorActionPreference = "Continue"
-  try { & $b } finally { $ErrorActionPreference = $prev }
+function Has([string]$name) { return [bool](Get-Command $name -ErrorAction SilentlyContinue) }
+function Prop($obj, [string]$name, $value) {
+  if ($null -eq $obj.PSObject.Properties[$name]) { $obj | Add-Member -NotePropertyName $name -NotePropertyValue $value }
+  return $obj.PSObject.Properties[$name].Value
 }
-function Rehash { $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" +
-                              [System.Environment]::GetEnvironmentVariable("Path","User") }
-
-if (Has claude) { Ok "claude CLI" } else {
-  Warn "claude CLI 를 PATH 에서 못 찾았다."
-  Say "       설치: https://claude.com/claude-code"
-}
-
-# ── Codex CLI: 설치 ─────────────────────────
-$hasCodex = Has codex
-if (-not $hasCodex -and -not $SkipDeps) {
-  Warn "codex CLI 가 없다. 이 하네스는 Codex 없이는 동작하지 않는다."
-  $method = $null
-  if (Has winget) { $method = "winget" } elseif (Has npm) { $method = "npm" }
-  if ($method -and (Ask "지금 설치할까? ($method 사용)")) {
-    Say "  설치 중..." 
-    try {
-      if ($method -eq "winget") {
-        Native { winget install --id OpenAI.Codex --accept-package-agreements --accept-source-agreements }
-      } else {
-        Native { npm install -g "@openai/codex" }
-      }
-      Rehash
-      $hasCodex = Has codex
-      if ($hasCodex) { Ok "codex CLI 설치 완료" }
-      else { Warn "설치는 됐을 수 있으나 PATH 에 아직 없다. 새 터미널에서 다시 실행해라." }
-    } catch { Bad "설치 실패: $_" }
-  } elseif (-not $method) {
-    Bad "winget 도 npm 도 없다. 아래 중 하나로 직접 설치해라."
-    Say "       npm install -g @openai/codex        (Node.js 22+ 필요)"
-    Say "       winget install OpenAI.Codex"
+function Warn([string]$message) { Write-Host "  [$($script:m.warning)] $message" -ForegroundColor Yellow }
+function Note([string]$message) { Write-Host "  $message" }
+function ReadUtf8([string]$path) { return [IO.File]::ReadAllText($path, $script:strictUtf8) }
+function WriteUtf8([string]$path, [string]$content) {
+  $dir = Split-Path -Parent $path
+  if (-not (Test-Path -LiteralPath $dir)) { [void][IO.Directory]::CreateDirectory($dir) }
+  $encoding = $script:utf8
+  if (Test-Path -LiteralPath $path) {
+    $bytes = [IO.File]::ReadAllBytes($path)
+    if ($bytes.Length -ge 3 -and $bytes[0] -eq 239 -and $bytes[1] -eq 187 -and $bytes[2] -eq 191) { $encoding = New-Object Text.UTF8Encoding($true) }
   }
-} elseif ($hasCodex) { Ok "codex CLI" }
+  [IO.File]::WriteAllText($path, $content, $encoding)
+}
+function SaveText([string]$path, [string]$content) {
+  if ((Test-Path -LiteralPath $path) -and (ReadUtf8 $path) -ceq $content) { return $false }
+  WriteUtf8 $path $content
+  return $true
+}
+function SaveCandidate([string]$path, [byte[]]$bytes) {
+  if (Test-Path -LiteralPath $path) {
+    if ((HashFile $path) -ne (HashBytes $bytes)) { Warn "$($script:m.newConflict): $path" }
+    return $false
+  }
+  $dir = Split-Path -Parent $path
+  if (-not (Test-Path -LiteralPath $dir)) { [void][IO.Directory]::CreateDirectory($dir) }
+  [IO.File]::WriteAllBytes($path, $bytes)
+  return $true
+}
+function Json($value) { return ($value | ConvertTo-Json -Depth 30) + "`n" }
+function HashBytes([byte[]]$bytes) {
+  $sha = [Security.Cryptography.SHA256]::Create()
+  try { return ([BitConverter]::ToString($sha.ComputeHash($bytes))).Replace('-','').ToLowerInvariant() }
+  finally { $sha.Dispose() }
+}
+function HashFile([string]$path) { return HashBytes ([IO.File]::ReadAllBytes($path)) }
+function AskChoice([string]$prompt, [string[]]$choices, [string]$default) {
+  if ($Yes) { return $default }
+  Write-Host $prompt
+  for ($i=0; $i -lt $choices.Count; $i++) { Write-Host "  $($i+1). $($choices[$i])" }
+  $answer = Read-Host "[$default]"
+  if ([string]::IsNullOrWhiteSpace($answer)) { return $default }
+  $number = 0
+  if ([int]::TryParse($answer, [ref]$number) -and $number -ge 1 -and $number -le $choices.Count) { return $choices[$number-1] }
+  if ($choices -contains $answer) { return $answer }
+  return $default
+}
 
-# ── Codex CLI: 로그인 ───────────────────────
-$codexAuth = $false
-if ($hasCodex -and -not $SkipDeps) {
-  Native { $null = codex login status 2>&1 }
-  if ($LASTEXITCODE -eq 0) { Ok "codex 로그인됨"; $codexAuth = $true }
+$configPath = Join-Path $root 'tandem/config.json'
+$existing = $null
+if (Test-Path -LiteralPath $configPath) {
+  try { $existing = (ReadUtf8 $configPath) | ConvertFrom-Json }
+  catch { throw "Invalid tandem/config.json: $_" }
+}
+$previousDocsRoot = if ($existing -and $existing.docs_root) { [string]$existing.docs_root } else { '' }
+if (-not $PSBoundParameters.ContainsKey('DocsRoot')) {
+  if ($existing -and $existing.docs_root) { $DocsRoot = [string]$existing.docs_root } else { $DocsRoot = 'docs/tandem' }
+}
+$DocsRoot = $DocsRoot.TrimEnd([char[]]@('/',[char]92)).Replace([char]92, [char]47)
+if ([IO.Path]::IsPathRooted($DocsRoot) -or $DocsRoot -match '(^|/)\.\.(/|$)' -or -not $DocsRoot) { throw 'DocsRoot must be a relative path inside the project.' }
+$modes = @('claude-main','codex-main','claude-solo','codex-solo')
+if (-not $PSBoundParameters.ContainsKey('Mode')) {
+  if ($existing -and $modes -contains $existing.mode) { $Mode = [string]$existing.mode }
+  else { $Mode = AskChoice 'Select mode / 모드 선택' $modes 'claude-main' }
+}
+if (-not $PSBoundParameters.ContainsKey('Lang')) {
+  if ($existing -and @('ko','en') -contains $existing.lang) { $Lang = [string]$existing.lang }
   else {
-    Warn "codex 에 로그인돼 있지 않다."
-    if (Ask "지금 로그인할까? (브라우저가 열린다)") {
-      Native { codex login }
-      Native { $null = codex login status 2>&1 }
-      if ($LASTEXITCODE -eq 0) { Ok "codex 로그인 완료"; $codexAuth = $true }
-      else { Warn "로그인이 확인되지 않았다. 나중에 'codex login' 을 실행해라." }
-    } else { Say "       나중에: codex login" }
+    $defaultLang = if ([Globalization.CultureInfo]::CurrentUICulture.TwoLetterISOLanguageName -eq 'ko') { 'ko' } else { 'en' }
+    $Lang = AskChoice 'Select language / 언어 선택' @('ko','en') $defaultLang
   }
 }
+$m = $messages[$Lang]
+if (-not $TemplateRoot) { $TemplateRoot = Join-Path $sourceRoot 'tandem/templates' }
+$langRoot = Join-Path $TemplateRoot $Lang
+if (-not (Test-Path -LiteralPath $langRoot)) { throw "Template language folder missing: $langRoot" }
+$contract = (ReadUtf8 (Join-Path $sourceRoot 'tandem/files.json')) | ConvertFrom-Json
+if (-not $contract.files) { throw 'tandem/files.json has no files.' }
 
-# ── 프로젝트 이름 ────────────────────────────
+# Preserve existing values while filling the v1.1 schema and migrating v1.0 model names.
 $project = Split-Path -Leaf $root
-if ($isGit) {
+if (Has git) {
   try {
-    $remote = git config --get remote.origin.url 2>$null
-    if ($remote) { $project = [System.IO.Path]::GetFileNameWithoutExtension($remote.TrimEnd('/')) }
+    $remote = Native { git config --get remote.origin.url 2>$null }
+    if ($remote) { $project = [IO.Path]::GetFileNameWithoutExtension(([string]$remote).TrimEnd('/')) }
   } catch {}
 }
-Say ""
-Say "프로젝트: $project" Cyan
-Say "문서 폴더: $DocsRoot"
-Say ""
+if ($existing) { $cfg = $existing } else { $cfg = [pscustomobject]@{} }
+[void](Prop $cfg 'set' 'TANDEM'); [void](Prop $cfg 'project' $project)
+[void](Prop $cfg 'installed' $today); [void](Prop $cfg 'adapted' $false)
+[void](Prop $cfg 'task_id_format' ''); [void](Prop $cfg 'source_of_truth' @())
+if (-not $cfg.models) { $cfg | Add-Member -NotePropertyName models -NotePropertyValue ([pscustomobject]@{}) -Force }
+$models = $cfg.models
+foreach ($name in @('codex_top','codex_mid','codex_light','claude_lead')) { [void](Prop $models $name '') }
+$legacy = @{ claude_top='claude_manager'; claude_mid='claude_critic'; claude_light='claude_dispatch' }
+$defaults = @{ claude_top='opus'; claude_mid='sonnet'; claude_light='haiku' }
+foreach ($name in @('claude_top','claude_mid','claude_light')) {
+  $oldName = $legacy[$name]
+  $value = if ($models.PSObject.Properties[$oldName] -and $models.$oldName) { $models.$oldName } else { $defaults[$name] }
+  [void](Prop $models $name $value)
+}
+foreach ($name in @('claude_manager','claude_dispatch','claude_critic')) {
+  if ($models.PSObject.Properties[$name]) { $models.PSObject.Properties.Remove($name) }
+}
+if (-not $cfg.jev) { $cfg | Add-Member -NotePropertyName jev -NotePropertyValue ([pscustomobject]@{}) -Force }
+[void](Prop $cfg.jev 'model' 'typesafe/jev-1.13')
+[void](Prop $cfg.jev 'key_env' 'TANDEM_JEV_API_KEY')
+[void](Prop $cfg.jev 'min_confidence' 0.6)
+[void](Prop $cfg.jev 'notify_missing_key' $true)
+if (-not $cfg.update) { $cfg | Add-Member -NotePropertyName update -NotePropertyValue ([pscustomobject]@{}) -Force }
+[void](Prop $cfg.update 'repo' 'carydev/Tandem')
+[void](Prop $cfg.update 'ref' 'main')
+[void](Prop $cfg.update 'notify' $true)
+[void](Prop $cfg 'version' $version); $cfg.version = $version
+[void](Prop $cfg 'docs_root' $DocsRoot); $cfg.docs_root = $DocsRoot
+[void](Prop $cfg 'mode' $Mode); $cfg.mode = $Mode
+[void](Prop $cfg 'lang' $Lang); $cfg.lang = $Lang
+[void](Prop $cfg 'updated' $today); $cfg.updated = $today
+$changes = 0
+if (SaveText $configPath (Json $cfg)) { $changes++; Note "config.json: $($m.replaced)" }
 
-# ── 치환값 ──────────────────────────────────
+if ($JevKey) {
+  Warn $m.jevWarning
+  [Environment]::SetEnvironmentVariable('TANDEM_JEV_API_KEY', $JevKey, 'User')
+  [Environment]::SetEnvironmentVariable('TANDEM_JEV_API_KEY', $JevKey, 'Process')
+} elseif (-not $NoJev -and -not $Yes -and -not [Environment]::GetEnvironmentVariable('TANDEM_JEV_API_KEY','User') -and -not $env:TANDEM_JEV_API_KEY) {
+  $secure = Read-Host $m.jevPrompt -AsSecureString
+  if ($secure.Length -gt 0) {
+    $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+    try { $key = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) }
+    finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
+    [Environment]::SetEnvironmentVariable('TANDEM_JEV_API_KEY', $key, 'User')
+    [Environment]::SetEnvironmentVariable('TANDEM_JEV_API_KEY', $key, 'Process')
+  }
+}
+
+if (-not $SkipDeps) {
+  if ($Mode -ne 'codex-solo' -and -not (Has claude)) { Warn 'claude CLI' }
+  if ($Mode -ne 'claude-solo') {
+    if (-not (Has codex)) {
+      Warn 'codex CLI'
+      if (-not $Yes) {
+        $answer = Read-Host $m.installCodex
+        if ($answer -match '^[Yy]') {
+          if (Has winget) { Native { winget install --id OpenAI.Codex --accept-package-agreements --accept-source-agreements } }
+          elseif (Has npm) { Native { npm install -g '@openai/codex' } }
+        }
+      }
+    }
+    if (Has codex) {
+      try { Native { $null = codex login status 2>&1 }; if ($LASTEXITCODE -ne 0) { Warn 'codex login' } }
+      catch { Warn 'codex login' }
+    }
+  }
+}
+
+$langName = if ($Lang -eq 'ko') { '한국어' } else { 'English' }
 $map = @{
-  "{{PROJECT}}"          = $project
-  "{{DOCS}}"             = $DocsRoot
-  "{{VERSION}}"          = $VERSION
-  "{{INSTALLED}}"        = (Get-Date -Format "yyyy-MM-dd")
-  "{{MODEL_TOP}}"        = "MODEL_TOP_미확정"
-  "{{MODEL_MID}}"        = "MODEL_MID_미확정"
-  "{{MODEL_LIGHT}}"      = "MODEL_LIGHT_미확정"
-  "{{CLAUDE_LEAD}}"      = "총괄모델_미확정"
-  "{{CLAUDE_MANAGER}}"   = "opus"
-  "{{CLAUDE_DISPATCH}}"  = "haiku"
-  "{{CLAUDE_CRITIC}}"    = "sonnet"
+  '{{PROJECT}}'=$cfg.project; '{{DOCS}}'=$DocsRoot; '{{VERSION}}'=$version; '{{INSTALLED}}'=$cfg.installed
+  '{{MODE}}'=$Mode; '{{LANG}}'=$Lang; '{{LANG_NAME}}'=$langName
+  '{{CLAUDE_TOP}}'=$models.claude_top; '{{CLAUDE_MID}}'=$models.claude_mid; '{{CLAUDE_LIGHT}}'=$models.claude_light
+  '{{CLAUDE_MANAGER}}'=$models.claude_top; '{{CLAUDE_DISPATCH}}'=$models.claude_light; '{{CLAUDE_CRITIC}}'=$models.claude_mid
 }
-
-$script:placed = @(); $script:kept = @(); $script:skipped = @()
-
-function Put([string]$src, [string]$dst) {
-  $full = Join-Path $root $dst
-  $dir  = Split-Path -Parent $full
-  if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-
-  $text = Get-Content -Path $src -Raw -Encoding UTF8
-  foreach ($k in $map.Keys) { $text = $text.Replace($k, $map[$k]) }
-
-  $target = $full
-  if (Test-Path $full) {
-    if (-not $Force) {
-      $existing = Get-Content -Path $full -Raw -Encoding UTF8
-      if ($existing -eq $text) { $script:skipped += $dst; return }
-    }
-    $target = "$full.new"
-    $script:kept += $dst
-  } else {
-    $script:placed += $dst
+foreach ($tier in @('TOP','MID','LIGHT')) {
+  $name = "codex_$($tier.ToLowerInvariant())"
+  $map["{{MODEL_$tier}}"] = if ($models.$name) { $models.$name } elseif ($Lang -eq 'ko') { "MODEL_$($tier)_미확정" } else { "MODEL_$($tier)_UNSET" }
+}
+$map['{{CLAUDE_LEAD}}'] = if ($models.claude_lead) { $models.claude_lead } elseif ($Lang -eq 'ko') { '총괄모델_미확정' } else { 'LEAD_MODEL_UNSET' }
+function Render([string]$source) {
+  $text = ReadUtf8 $source
+  $lines = [regex]::Split($text, '(?<=\n)')
+  $keep = $true; $out = New-Object Text.StringBuilder
+  foreach ($line in $lines) {
+    if ($line -match '^\s*@@if\s+(.+?)\s*$') { $keep = @(($matches[1] -split '\s+') | Where-Object { $_ -eq $Mode }).Count -gt 0; continue }
+    if ($line -match '^\s*@@endif\s*$') { $keep = $true; continue }
+    if ($keep) { [void]$out.Append($line) }
   }
-  # BOM 없는 UTF8
-  [System.IO.File]::WriteAllText($target, $text, (New-Object System.Text.UTF8Encoding $false))
+  $text = $out.ToString()
+  foreach ($key in $map.Keys) { $text = $text.Replace($key, [string]$map[$key]) }
+  if ($text -match '\{\{[A-Z_]+\}\}|@@(?:if|endif)') { throw "Unresolved template token: $source" }
+  return $text
 }
-
-Say "파일 배치" Cyan
-
-# 역할과 커맨드
-Put "$tpl\claude\agents\tandem-manager.md"   ".claude/agents/tandem-manager.md"
-Put "$tpl\claude\agents\tandem-dispatch.md"  ".claude/agents/tandem-dispatch.md"
-Put "$tpl\claude\agents\tandem-critic.md"    ".claude/agents/tandem-critic.md"
-Put "$tpl\claude\commands\tandem.md"         ".claude/commands/tandem.md"
-Put "$tpl\claude\commands\tandem-status.md"  ".claude/commands/tandem-status.md"
-
-# Codex
-Put "$tpl\codex\config.toml"                 ".codex/config.toml"
-Get-ChildItem "$tpl\codex\agents\*.toml" | ForEach-Object { Put $_.FullName ".codex/agents/$($_.Name)" }
-
-# 운영 문서
-Put "$tpl\docs\lead-charter.md"       "$DocsRoot/lead-charter.md"
-Put "$tpl\docs\model-routing.md"      "$DocsRoot/model-routing.md"
-Put "$tpl\docs\delegation.md"         "$DocsRoot/delegation.md"
-Put "$tpl\docs\operating-model.md"    "$DocsRoot/operating-model.md"
-Put "$tpl\docs\harness-status.md"     "$DocsRoot/harness-status.md"
-Put "$tpl\docs\log\README.md"         "$DocsRoot/log/README.md"
-Put "$tpl\docs\reports\README.md"     "$DocsRoot/reports/README.md"
-Put "$tpl\docs\tasks\README.md"       "$DocsRoot/tasks/README.md"
-Put "$tpl\docs\briefings\README.md"   "$DocsRoot/briefings/README.md"
-
-# 적응 지시서
-Put "$here\tandem\adapt.md" "tandem/adapt.md"
-
-Ok "$($script:placed.Count) 개 배치"
-if ($script:skipped.Count) { Ok "$($script:skipped.Count) 개 변경 없음" }
-if ($script:kept.Count) {
-  Warn "$($script:kept.Count) 개는 이미 있어서 .new 로 저장했다. /tandem 이 병합안을 제시한다."
-  $script:kept | ForEach-Object { Say "       $_" }
+function Dest([string]$relative) {
+  $relative = $relative.Replace('{{DOCS}}', $DocsRoot).Replace('\','/')
+  if ([IO.Path]::IsPathRooted($relative) -or $relative -match '(^|/)\.\.(/|$)') { throw "Invalid contract destination: $relative" }
+  return $relative
 }
-
-# ── 빈 폴더와 로그 ───────────────────────────
-foreach ($d in @("$DocsRoot/tasks","$DocsRoot/briefings","$DocsRoot/reports/work/parts",
-                 "$DocsRoot/reports/critique","$DocsRoot/reports/review","$DocsRoot/reports/setup")) {
-  $p = Join-Path $root $d
-  if (-not (Test-Path $p)) { New-Item -ItemType Directory -Path $p -Force | Out-Null }
-  $gk = Join-Path $p ".gitkeep"
-  if (-not (Test-Path $gk)) { New-Item -ItemType File -Path $gk -Force | Out-Null }
-}
-$logFile = Join-Path $root "$DocsRoot/log/runs.jsonl"
-if (-not (Test-Path $logFile)) {
-  New-Item -ItemType File -Path $logFile -Force | Out-Null
-  Ok "실행 로그 생성"
-} else { Ok "실행 로그 유지 (기존 기록 보존)" }
-
-# ── CLAUDE.md / AGENTS.md 블록 ──────────────
-function Block([string]$tplFile, [string]$dstFile) {
-  $text = Get-Content -Path (Join-Path $tpl $tplFile) -Raw -Encoding UTF8
-  foreach ($k in $map.Keys) { $text = $text.Replace($k, $map[$k]) }
-  $full = Join-Path $root $dstFile
-  if (Test-Path $full) {
-    $cur = Get-Content -Path $full -Raw -Encoding UTF8
-    if ($cur -match '(?s)<!-- TANDEM:BEGIN -->.*?<!-- TANDEM:END -->') {
-      $repl = [System.Text.RegularExpressions.MatchEvaluator]{ param($m) $text.TrimEnd() }
-      $new = [regex]::Replace($cur, '(?s)<!-- TANDEM:BEGIN -->.*?<!-- TANDEM:END -->', $repl)
-      [System.IO.File]::WriteAllText($full, $new, (New-Object System.Text.UTF8Encoding $false))
-      Ok "$dstFile 의 TANDEM 블록 갱신"
-    } else {
-      [System.IO.File]::AppendAllText($full, "`r`n$text", (New-Object System.Text.UTF8Encoding $false))
-      Ok "$dstFile 에 TANDEM 블록 추가"
-    }
-  } else {
-    [System.IO.File]::WriteAllText($full, $text, (New-Object System.Text.UTF8Encoding $false))
-    Ok "$dstFile 생성"
-  }
-}
-Block "CLAUDE.tandem.md" "CLAUDE.md"
-Block "AGENTS.tandem.md" "AGENTS.md"
-
-# ── settings.json 병합 ──────────────────────
-$sPath = Join-Path $root ".claude\settings.json"
-$sTpl  = Get-Content -Path (Join-Path $tpl "settings.tandem.json") -Raw -Encoding UTF8
-foreach ($k in $map.Keys) { $sTpl = $sTpl.Replace($k, $map[$k]) }
-$sNew  = $sTpl | ConvertFrom-Json
-
-if (Test-Path $sPath) {
+$manifestPath = Join-Path $root 'tandem/manifest.json'
+$manifest = [pscustomobject]@{ version=$version; files=[pscustomobject]@{} }
+if (Test-Path -LiteralPath $manifestPath) {
   try {
-    $cur = Get-Content -Path $sPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    if (-not $cur.env) { $cur | Add-Member -NotePropertyName env -NotePropertyValue ([pscustomobject]@{}) -Force }
-    foreach ($p in $sNew.env.PSObject.Properties) {
-      $cur.env | Add-Member -NotePropertyName $p.Name -NotePropertyValue $p.Value -Force
+    $manifest = (ReadUtf8 $manifestPath) | ConvertFrom-Json
+    if (-not $manifest.files) { $manifest | Add-Member -NotePropertyName files -NotePropertyValue ([pscustomobject]@{}) -Force }
+  } catch { throw "Invalid tandem/manifest.json: $_" }
+}
+$wanted = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+$activeBlocks = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+$knownFiles = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+foreach ($entry in $contract.files | Where-Object { $_.kind -in @('file','copy') }) {
+  [void]$knownFiles.Add((Dest ([string]$entry.dst)))
+  if ($previousDocsRoot -and $entry.dst.Contains('{{DOCS}}')) {
+    $previous = ([string]$entry.dst).Replace('{{DOCS}}', $previousDocsRoot.Replace('\','/'))
+    [void]$knownFiles.Add($previous)
+  }
+}
+foreach ($entry in $contract.files) {
+  $dst = Dest ([string]$entry.dst)
+  $full = Join-Path $root $dst
+  $active = @($entry.modes) -contains $Mode
+  if (-not $active) { continue }
+  if ($entry.kind -eq 'block') { [void]$activeBlocks.Add($dst) }
+  if ($entry.kind -notin @('file','copy')) { continue }
+  $source = if ($entry.kind -eq 'copy') { Join-Path $sourceRoot $entry.src } else { Join-Path $langRoot $entry.src }
+  [void]$wanted.Add($dst)
+  if (-not (Test-Path -LiteralPath $source)) { Warn "$($m.missing): $source"; continue }
+  $bytes = if ($entry.kind -eq 'copy') { [IO.File]::ReadAllBytes($source) } else { $utf8.GetBytes((Render $source)) }
+  $newHash = HashBytes $bytes
+  $oldProp = $manifest.files.PSObject.Properties[$dst]
+  $oldHash = if ($oldProp) { [string]$oldProp.Value } else { '' }
+  if (-not (Test-Path -LiteralPath $full)) {
+    $dir = Split-Path -Parent $full; if (-not (Test-Path -LiteralPath $dir)) { [void][IO.Directory]::CreateDirectory($dir) }
+    [IO.File]::WriteAllBytes($full, $bytes)
+    $manifest.files | Add-Member -NotePropertyName $dst -NotePropertyValue $newHash -Force
+    $changes++; Note "$($m.added): $dst"
+  } else {
+    $currentHash = HashFile $full
+    if ($currentHash -eq $newHash) {
+      $manifest.files | Add-Member -NotePropertyName $dst -NotePropertyValue $newHash -Force
+    } elseif ($oldHash -and $currentHash -eq $oldHash) {
+      [IO.File]::WriteAllBytes($full, $bytes)
+      $manifest.files | Add-Member -NotePropertyName $dst -NotePropertyValue $newHash -Force
+      $changes++; Note "$($m.replaced): $dst"
+    } else {
+      if (SaveCandidate "$full.new" $bytes) { $changes++; Warn "$($m.preserved): $dst" }
     }
-    if (-not $cur.permissions) { $cur | Add-Member -NotePropertyName permissions -NotePropertyValue ([pscustomobject]@{allow=@()}) -Force }
-    if (-not $cur.permissions.allow) { $cur.permissions | Add-Member -NotePropertyName allow -NotePropertyValue @() -Force }
-    $allow = @($cur.permissions.allow) + @($sNew.permissions.allow) | Select-Object -Unique
-    $cur.permissions.allow = $allow
-    [System.IO.File]::WriteAllText($sPath, ($cur | ConvertTo-Json -Depth 20), (New-Object System.Text.UTF8Encoding $false))
-    Ok ".claude/settings.json 병합"
-  } catch {
-    [System.IO.File]::WriteAllText("$sPath.new", $sTpl, (New-Object System.Text.UTF8Encoding $false))
-    Warn ".claude/settings.json 파싱 실패. .new 로 저장했다."
   }
-} else {
-  $dir = Split-Path -Parent $sPath
-  if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-  [System.IO.File]::WriteAllText($sPath, $sTpl, (New-Object System.Text.UTF8Encoding $false))
-  Ok ".claude/settings.json 생성"
 }
-
-# ── .gitignore ──────────────────────────────
-$gi = Join-Path $root ".gitignore"
-$giText = if (Test-Path $gi) { Get-Content -Path $gi -Raw -Encoding UTF8 } else { "" }
-if ($giText -notmatch '(?m)^\.codex-last/') {
-  [System.IO.File]::AppendAllText($gi, "`r`n# TANDEM`r`n.codex-last/`r`n", (New-Object System.Text.UTF8Encoding $false))
-  Ok ".gitignore 에 .codex-last/ 추가"
+foreach ($prop in @($manifest.files.PSObject.Properties)) {
+  if ($wanted.Contains($prop.Name)) { continue }
+  $relative = $prop.Name.Replace('\','/')
+  $full = $null
+  try {
+    if (-not $knownFiles.Contains($relative) -or [IO.Path]::IsPathRooted($relative) -or $relative -match '(^|/)\.{1,2}(/|$)' -or $relative.Contains(':')) { throw 'Unexpected manifest path' }
+    $full = [IO.Path]::GetFullPath((Join-Path $root $relative))
+    $rootPrefix = [IO.Path]::GetFullPath($root).TrimEnd([char[]]@('/',[char]92)) + [IO.Path]::DirectorySeparatorChar
+    if (-not $full.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)) { throw 'Outside project root' }
+    $partPath = $root
+    foreach ($part in ($relative -split '/')) {
+      $partPath = Join-Path $partPath $part
+      if ((Test-Path -LiteralPath $partPath) -and ((Get-Item -LiteralPath $partPath -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Reparse point in manifest path' }
+    }
+  } catch { Warn "$($m.invalidPath): $($prop.Name)"; continue }
+  if (-not (Test-Path -LiteralPath $full) -or (HashFile $full) -eq $prop.Value) {
+    if (Test-Path -LiteralPath $full) { Remove-Item -LiteralPath $full -Force; $changes++; Note "$($m.removed): $($prop.Name)" }
+    $manifest.files.PSObject.Properties.Remove($prop.Name)
+  } else { Warn "$($m.preserved): $($prop.Name)" }
 }
+$manifest.version = $version
+if (SaveText $manifestPath (Json $manifest)) { $changes++ }
 
-# ── config.json ─────────────────────────────
-$cfgPath = Join-Path $root "tandem\config.json"
-if ((Test-Path $cfgPath) -and -not $Force) {
-  Ok "tandem/config.json 유지 (기존 설정 보존)"
-} else {
-  $cfg = [ordered]@{
-    set        = "TANDEM"
-    version    = $VERSION
-    project    = $project
-    docs_root  = $DocsRoot
-    installed  = (Get-Date -Format "yyyy-MM-dd")
-    adapted    = $false
-    models     = [ordered]@{ codex_top=""; codex_mid=""; codex_light="";
-                             claude_lead=""; claude_manager="opus";
-                             claude_dispatch="haiku"; claude_critic="sonnet" }
-    task_id_format = ""
-    source_of_truth = @()
+$blockPattern = '(?s)<!-- TANDEM:BEGIN -->.*?<!-- TANDEM:END -->'
+foreach ($entry in $contract.files | Where-Object { $_.kind -eq 'block' }) {
+  $dst = Dest ([string]$entry.dst); $full = Join-Path $root $dst
+  if ($activeBlocks.Contains($dst)) {
+    $source = Join-Path $langRoot $entry.src
+    if (-not (Test-Path -LiteralPath $source)) { Warn "$($m.missing): $source"; continue }
+    $block = (Render $source).TrimEnd()
+    if ($block -notmatch '<!-- TANDEM:BEGIN -->' -or $block -notmatch '<!-- TANDEM:END -->') { throw "Missing block markers: $source" }
+    if (Test-Path -LiteralPath $full) {
+      try { $current = ReadUtf8 $full }
+      catch {
+        if (SaveCandidate "$full.new" ($utf8.GetBytes($block + "`n"))) { $changes++ }
+        Warn "$($m.encoding): $dst"
+        continue
+      }
+      if ([regex]::IsMatch($current, $blockPattern)) {
+        $evaluator = [Text.RegularExpressions.MatchEvaluator]{ param($match) $block }
+        $result = [regex]::Replace($current, $blockPattern, $evaluator, 1)
+      } else { $result = $current + "`n`n" + $block + "`n" }
+    } else { $result = $block + "`n" }
+    if (SaveText $full $result) { $changes++; Note "$($m.replaced): $dst" }
+  } elseif (Test-Path -LiteralPath $full) {
+    try { $current = ReadUtf8 $full }
+    catch { Warn "$($m.encoding): $dst"; continue }
+    if ([regex]::IsMatch($current, $blockPattern)) {
+      $result = [regex]::Replace($current, $blockPattern, '', 1)
+      if (SaveText $full $result) { $changes++; Note "$($m.removed): $dst block" }
+    }
   }
-  [System.IO.File]::WriteAllText($cfgPath, ($cfg | ConvertTo-Json -Depth 10), (New-Object System.Text.UTF8Encoding $false))
-  Ok "tandem/config.json 생성"
 }
 
-# ── 안내 ────────────────────────────────────
-Say ""
-Say "설치 완료" Green
-Say ""
-Say "다음 한 줄:" Cyan
-Say ""
-Say "    claude" White
-Say ""
-Say "  세션이 뜨면 입력:" Cyan
-Say ""
-Say "    /tandem" White
-Say ""
-Say "  적응 세션이 환경을 확인하고 이 프로젝트에 맞게 고친 뒤 검증까지 한다." 
-Say "  끝나면 보고하고 멈춘다. 커밋은 네가 직접 한다."
-Say ""
-if (-not $hasCodex) {
-  Bad "Codex CLI 가 아직 없다. /tandem 이 1단계에서 멈춘다."
-  Say "       npm install -g @openai/codex   또는   winget install OpenAI.Codex"
-  Say ""
-} elseif (-not $codexAuth -and -not $SkipDeps) {
-  Warn "codex 로그인이 아직 안 돼 있다. /tandem 전에 'codex login' 을 실행해라."
-  Say ""
+function HasCheckHook($items) {
+  foreach ($item in @($items)) {
+    foreach ($hook in @($item.hooks)) { if ($hook.command -like '*tandem/tools/check.ps1*') { return $true } }
+  }
+  return $false
 }
+function RemoveCheckHooks($document) {
+  if (-not $document.PSObject.Properties['hooks'] -or -not $document.hooks -or -not $document.hooks.PSObject.Properties['SessionStart']) { return $false }
+  $remaining = @()
+  $changed = $false
+  foreach ($item in @($document.hooks.SessionStart)) {
+    $oldHooks = @($item.hooks)
+    $keepHooks = @($oldHooks | Where-Object { $_.command -notlike '*tandem/tools/check.ps1*' })
+    if ($keepHooks.Count -ne $oldHooks.Count) { $changed = $true }
+    if ($keepHooks.Count -gt 0) {
+      if ($keepHooks.Count -ne $oldHooks.Count) { $item.hooks = @($keepHooks) }
+      $remaining += $item
+    } elseif ($oldHooks.Count -eq 0) { $remaining += $item }
+  }
+  if ($changed) {
+    if ($remaining.Count -gt 0) { $document.hooks.SessionStart = @($remaining) }
+    else { $document.hooks.PSObject.Properties.Remove('SessionStart') }
+    if ($document.hooks.PSObject.Properties.Count -eq 0) { $document.PSObject.Properties.Remove('hooks') }
+  }
+  return $changed
+}
+function HookEntry([string]$agent) {
+  return [pscustomobject]@{ matcher='startup'; hooks=@([pscustomobject]@{
+    type='command'; command="powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/check.ps1 -Agent $agent"; timeout=15
+  }) }
+}
+foreach ($entry in $contract.files | Where-Object { $_.kind -in @('settings','codex-hooks') }) {
+  $dst = Dest ([string]$entry.dst); $full = Join-Path $root $dst
+  $active = @($entry.modes) -contains $Mode
+  if (-not $active -and -not (Test-Path -LiteralPath $full)) { continue }
+  $source = Join-Path $langRoot $entry.src
+  if ($active) {
+    if (-not (Test-Path -LiteralPath $source)) { Warn "$($m.missing): $source"; continue }
+    $template = Render $source
+    try { $incoming = $template | ConvertFrom-Json }
+    catch { throw "Invalid JSON template: $source" }
+  }
+  if (Test-Path -LiteralPath $full) {
+    try { $current = (ReadUtf8 $full) | ConvertFrom-Json }
+    catch {
+      if ($active -and (SaveCandidate "$full.new" ($utf8.GetBytes($template)))) { $changes++ }
+      Warn "$($m.parse): $dst"
+      continue
+    }
+  } else { $current = [pscustomobject]@{} }
+  if ($active -and $entry.kind -eq 'settings') {
+    $envPart = Prop $current 'env' ([pscustomobject]@{})
+    foreach ($p in $incoming.env.PSObject.Properties) { $envPart | Add-Member -NotePropertyName $p.Name -NotePropertyValue $p.Value -Force }
+    $permissions = Prop $current 'permissions' ([pscustomobject]@{})
+    $allow = @(Prop $permissions 'allow' @()) + @($incoming.permissions.allow) + @('Bash(powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/*)') | Select-Object -Unique
+    $permissions.allow = @($allow)
+  }
+  $wantHook = ($entry.kind -eq 'settings' -and $Mode -in @('claude-main','claude-solo')) -or
+              ($entry.kind -eq 'codex-hooks' -and $Mode -in @('codex-main','codex-solo'))
+  $removedHook = $false
+  if (-not $wantHook) { $removedHook = RemoveCheckHooks $current }
+  if ($wantHook) {
+    $hooks = Prop $current 'hooks' ([pscustomobject]@{})
+    $sessions = @(Prop $hooks 'SessionStart' @())
+    if (-not (HasCheckHook $sessions)) {
+      $agent = if ($entry.kind -eq 'settings') { 'claude' } else { 'codex' }
+      $hooks.SessionStart = @($sessions) + @(HookEntry $agent)
+    }
+  }
+  if ($active -or $removedHook) {
+    if (SaveText $full (Json $current)) { $changes++; Note "$($m.replaced): $dst" }
+  }
+}
+
+$gitignore = Join-Path $root '.gitignore'
+$ignoreText = ''
+if (Test-Path -LiteralPath $gitignore) {
+  try { $ignoreText = ReadUtf8 $gitignore }
+  catch {
+    $candidate = ".codex-last/`ntandem/.cache/`n"
+    if (SaveCandidate "$gitignore.new" ($utf8.GetBytes($candidate))) { $changes++ }
+    Warn "$($m.encoding): .gitignore"
+    $ignoreText = $null
+  }
+}
+if ($null -ne $ignoreText) {
+foreach ($pattern in @('.codex-last/','tandem/.cache/')) {
+  if (@($ignoreText -split '\r?\n') -notcontains $pattern) {
+    if ($ignoreText -and -not $ignoreText.EndsWith("`n")) { $ignoreText += "`n" }
+    $ignoreText += "$pattern`n"
+  }
+}
+if (SaveText $gitignore $ignoreText) { $changes++; Note "$($m.replaced): .gitignore" }
+}
+
+if ($changes -eq 0) { Note $m.unchanged }
+Write-Host $m.done -ForegroundColor Green
+if ($Mode -like 'claude-*') { Write-Host $m.nextClaude } else { Write-Host $m.nextCodex }
+exit 0

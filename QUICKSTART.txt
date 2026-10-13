@@ -1,18 +1,17 @@
-TANDEM - 빠른 시작
+TANDEM v1.1 - 빠른 시작 (Windows PowerShell 5.1+)
 
-[한 줄 설치]  설치할 프로젝트 루트에서
+설치할 프로젝트 루트에서:
 
-  Windows   :  iwr -useb https://raw.githubusercontent.com/carydev/Tandem/main/boot.ps1 | iex
-  mac/Linux :  curl -fsSL https://raw.githubusercontent.com/carydev/Tandem/main/boot.sh | bash
+  & ([scriptblock]::Create((iwr -useb https://raw.githubusercontent.com/carydev/Tandem/main/boot.ps1))) -Mode claude-main -Lang ko
 
-[내려받아 실행]  압축을 프로젝트 루트에 풀고
+-Mode: claude-main | codex-main | claude-solo | codex-solo
+-Lang: ko | en (대화·문서·안내 언어)
+같은 명령을 다시 실행하면 업데이트한다. -Mode를 바꾸면 모드가 전환된다.
 
-  Windows   :  .\install.ps1
-  mac/Linux :  ./install.sh
+claude-main / claude-solo: claude 실행 → /tandem
+codex-main / codex-solo: codex 실행 → tandem/adapt.md를 읽고 적응 지시
+Codex 훅은 프로젝트 신뢰 설정 후 /hooks에서 승인한다.
 
-[그리고]
-
-  claude
-  /tandem
-
-끝. 자세한 내용은 README.md, 배포는 PUBLISH.md
+내려받은 저장소에서 설치: 프로젝트 루트에서 경로\Tandem\install.ps1 -Mode codex-main -Lang en
+macOS/Linux 스크립트는 v1.0 상태로 남아 있지만 v1.1에서는 지원하지 않는다.
+자세한 내용: README.md / README.ko.md. 배포: PUBLISH.md.
