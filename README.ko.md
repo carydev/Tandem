@@ -8,7 +8,7 @@
 iwr -useb https://raw.githubusercontent.com/carydev/Tandem/main/boot.ps1 | iex
 ```
 
-`-Mode`로 모드를, `-Lang ko` 또는 `-Lang en`으로 언어를 고른다. 기본 모드는 `claude-main`이다.
+옵션 없이 실행하면 설치기가 모드와 언어를 대화형으로 묻는다. `-Mode` 또는 `-Lang ko|en`을 직접 주려면 빠른 시작의 `scriptblock` 형식을 쓴다.
 
 ## 왜 쓰나
 
@@ -131,6 +131,8 @@ Claude 총괄 세션에서는 `/tandem-tokens`, PowerShell에서는 `tandem/tool
 ## 포크해서 배포하기
 
 `boot.ps1`과 설치 예시의 `carydev/Tandem`을 본인 저장소로 바꾼다. 절차는 [PUBLISH.md](PUBLISH.md)를 본다.
+
+[변경 기록](CHANGELOG.ko.md)에서 릴리스별 변경 사항을 볼 수 있다.
 
 ## 라이선스
 

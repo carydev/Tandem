@@ -8,7 +8,7 @@
 iwr -useb https://raw.githubusercontent.com/carydev/Tandem/main/boot.ps1 | iex
 ```
 
-Use `-Mode` to choose a mode and `-Lang ko` or `-Lang en` to choose the language. The default mode is `claude-main`.
+Without options, the installer asks you to choose a mode and language. To pass `-Mode` or `-Lang ko|en` directly, use the `scriptblock` form in Quick start.
 
 ## Why
 
@@ -131,6 +131,8 @@ Revert your install commit. Review any `.new` files and user edits separately.
 ## Fork and publish your own
 
 Replace `carydev/Tandem` in `boot.ps1` and install examples with your repository. See [PUBLISH.md](PUBLISH.md).
+
+See the [Changelog](CHANGELOG.md) for release notes.
 
 ## License
 
