@@ -93,13 +93,13 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - [x] 첫 푸시 `3334b14` (2026-09-28). GitHub 자동 생성 README 커밋 `22e0e22` 위에 얹음
 - [x] 실제 URL로 한 줄 설치 검증 (2026-09-28). PS 5.1, 빈 git 폴더에서 `iwr ... | iex` 성공, 20개 배치
 - [ ] 저장소 description, topics 설정 - `gh`가 로그인 안 돼 있어 사람이 GitHub 웹에서 직접 넣는다
-- [ ] 릴리스 태그 `v1.0`
 - [x] **v1.1** (2026-10-13): 모드 4가지, 언어 선택(ko/en), 지문 기반 업데이트, 세션 시작 알림(새 버전·Jev 키),
       Jev 선택 기능, `/tandem-tokens` 리포트와 다이어트 진단, 실행 래퍼(폴링 차단·자동 로그), 카파시 규칙, 사용자 응대 규칙
       - TANDEM 방식으로 작업: Claude가 설계서·카드·검수, Codex가 구현 12회(C1-C8). Codex 입력 2,253만 중 97% 캐시, 출력 20만
       - 승급 1회: C4 번역 gpt-6-luna 실패(구조만 복사) → gpt-6-sol 재시도 성공
 - [x] v1.1 푸시 `c41a28e` + 원격 검증 (2026-10-13): 실제 URL 옵션 설치(codex-main, en) 성공, 원격 VERSION 기준 업데이트 알림 "1.0 -> 1.1" 확인
-- [ ] 릴리스 태그 `v1.1`
+- [x] 릴리스 노트 `CHANGELOG.md`/`CHANGELOG.ko.md`, 태그 `v1.0`(3d4571b)·`v1.1`(4cdd196) 푸시 (2026-10-13)
+- [ ] GitHub Releases 페이지 생성 - `gh` 미로그인. 본문 초안은 `.work/v1.1/release-v1.1.md`(배포 안 함)
 
 방침: **Windows 전용으로 최적화한다.** `install.sh`/`boot.sh`는 남겨 두지만 검증과 개선 대상이 아니다.
 
