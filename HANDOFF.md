@@ -68,7 +68,6 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 
 ## 검증 안 된 것 (남은 일)
 
-- **원격 업데이트 알림**: 푸시 후 `raw.githubusercontent.com/carydev/Tandem/main/VERSION`이 실제로 읽히는지
 - **Jev 실제 호출**: 키가 없어 `-DryRun`·키 없음·응답 검증 함수만 확인
 - **Codex 훅**: `.codex/hooks.json`은 프로젝트 신뢰 + `/hooks` 승인 후에만 돈다. 실제 Codex 세션에서 알림 표시 미확인
 - **Claude 훅 알림 표시**: settings 병합까지만 확인. 실제 세션 시작 화면 표시 미확인
@@ -99,7 +98,8 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
       Jev 선택 기능, `/tandem-tokens` 리포트와 다이어트 진단, 실행 래퍼(폴링 차단·자동 로그), 카파시 규칙, 사용자 응대 규칙
       - TANDEM 방식으로 작업: Claude가 설계서·카드·검수, Codex가 구현 12회(C1-C8). Codex 입력 2,253만 중 97% 캐시, 출력 20만
       - 승급 1회: C4 번역 gpt-6-luna 실패(구조만 복사) → gpt-6-sol 재시도 성공
-- [ ] v1.1 원격 검증: 한 줄 설치, 업데이트 알림 (위 "검증 안 된 것")
+- [x] v1.1 푸시 `c41a28e` + 원격 검증 (2026-10-13): 실제 URL 옵션 설치(codex-main, en) 성공, 원격 VERSION 기준 업데이트 알림 "1.0 -> 1.1" 확인
+- [ ] 릴리스 태그 `v1.1`
 
 방침: **Windows 전용으로 최적화한다.** `install.sh`/`boot.sh`는 남겨 두지만 검증과 개선 대상이 아니다.
 
