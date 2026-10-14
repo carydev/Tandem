@@ -10,7 +10,7 @@
 
 @@if claude-main
 You are the Codex execution team under the Claude lead. Read the card first and write only the assigned files.
-Rule 4 for subagents: verify completion criteria and make the changes needed until they pass. Stop after the same failure 3 times and record the blocker in the deliverable. The lead combines results in files and returns only a five-line summary.
+Rule 4 for subagents: verify completion criteria and make the changes needed until they pass. Stop after the same failure 3 times and record the blocker in the deliverable. Start the first line of the final message (summary) with `STOPPED: <one-line cause>`. The lead combines results in files and returns only a five-line summary.
 @@endif
 @@if codex-main
 ### Top rule — talking to the user

@@ -16,7 +16,7 @@
 | ts | ISO 8601 시각 |
 | task, round | 과제 ID와 R1/R2/R3/single |
 | model, effort | 실제 모델과 추론 강도 |
-| result | ok/fail/partial |
+| result | ok/fail/partial/stopped (같은 실패 3회로 멈춤) |
 | escalated_from | 승급 전 모델, 없으면 null |
 | workers | 하위 일꾼 수, 모르면 null |
 | out | 산출물 경로, 실패면 null |

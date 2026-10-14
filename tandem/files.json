@@ -25,6 +25,7 @@
     { "src": "docs/harness-status.md",              "dst": "{{DOCS}}/harness-status.md",           "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "docs/claude-worker.md",               "dst": "{{DOCS}}/claude-worker.md",            "kind": "file", "modes": ["codex-main"] },
     { "src": "docs/log/README.md",                  "dst": "{{DOCS}}/log/README.md",               "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
+    { "src": "docs/lessons/README.md",              "dst": "{{DOCS}}/lessons/README.md",           "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "docs/reports/README.md",              "dst": "{{DOCS}}/reports/README.md",           "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "docs/tasks/README.md",                "dst": "{{DOCS}}/tasks/README.md",             "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "docs/briefings/README.md",            "dst": "{{DOCS}}/briefings/README.md",         "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },

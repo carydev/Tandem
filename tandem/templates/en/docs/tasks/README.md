@@ -2,6 +2,7 @@
 
 Follow the project's existing task ID format. If there is no existing format, choose one during adaptation.
 Each card states the goal, confirmed background, write scope, output path, model and effort, reference paths, and verifiable completion criteria.
+Before writing a card, follow lessons/README.md: grep lessons.md by relevant tags and add only matching lines to the background.
 @@if claude-main
 tandem-manager writes the card and the Codex lead reads it.
 @@endif

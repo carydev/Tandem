@@ -62,6 +62,12 @@ iwr -useb https://raw.githubusercontent.com/carydev/Tandem/main/boot.ps1 | iex
 
 실행 래퍼는 반복 폴링 없이 일꾼을 기다리고 호출을 자동 기록한다. 모델을 지정하지 않은 Claude 하위 에이전트는 `CLAUDE_CODE_SUBAGENT_MODEL`로 `sonnet`을 쓴다. 세션 규칙은 같은 과제를 이어서 하고 무관한 과제는 새 세션에서 하도록 한다. 효율 규칙은 필요한 파일과 테스트 출력만 읽도록 한다.
 
+### 공식 Codex 플러그인과의 관계
+
+OpenAI의 [codex-plugin-cc](https://github.com/openai/codex-plugin-cc)는 Claude Code 안에서 Codex 검토와 작업 위임을 지원한다.
+TANDEM에는 이 플러그인이 필요하지 않다. 자체 `codex-run.ps1` 래퍼로 과제 카드, 토큰 기록, 모델 배치를 처리한다.
+2026-10-14 기준 Windows의 검토 모드와 셸 호출에 미해결 이슈가 있다: [#57](https://github.com/openai/codex-plugin-cc/issues/57), [#295](https://github.com/openai/codex-plugin-cc/issues/295).
+
 ### Jev (선택)
 
 Jev는 OpenRouter를 통해 쓰는 TypeSafe의 결정 전용 모델이다. 모델과 추론 강도, 승급 여부, 교차 검수 필요 여부만 고른다. **산출물 합격 판정이나 G1/G2 결정은 하지 않는다.** 키가 없으면 v1.0처럼 배치표를 쓴다.

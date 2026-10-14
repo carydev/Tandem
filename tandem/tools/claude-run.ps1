@@ -1,4 +1,4 @@
-﻿param([string]$Task,[ValidateSet('R1','R2','R3','single')][string]$Round='single',[string]$Card,[string]$Out,[ValidateSet('sonnet','opus','haiku')][string]$Model='haiku',[string]$Effort='low',[ValidateSet('workspace-write','read-only')][string]$Sandbox='workspace-write',[string]$DecidedBy='table',[string]$Prompt,[string]$Wait,[int]$WaitSeconds=540,[string]$RunnerState)
+﻿param([string]$Task,[ValidateSet('R1','R2','R3','single')][string]$Round='single',[string]$Card,[string]$Out,[string]$Model='haiku',[string]$Effort='low',[ValidateSet('workspace-write','read-only')][string]$Sandbox='workspace-write',[string]$DecidedBy='table',[string]$Prompt,[string]$Wait,[int]$WaitSeconds=540,[string]$RunnerState)
 try { [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false) } catch {}  # UTF-8 stdout: PS 5.1 defaults to the OEM code page (cp949 on Korean Windows), which garbles non-ASCII output read by Bash/Claude
 $ErrorActionPreference='Stop'
 $utf8=[Text.UTF8Encoding]::new($false)
@@ -9,6 +9,12 @@ function Messages([string]$root) {
         ko=@{task='Task, Card, Out이 필요합니다'; fail='실행에 실패했습니다'; instruction='작업 카드 {0}을 읽고 따르세요. 결과 파일: {1}. 쓰기 범위: {2}. {3}`n작업 카드(UTF-8):`n{4}'; readonly=' 전체 결과를 마지막 메시지에 작성하세요. 래퍼가 Out에 저장합니다. 파일을 수정하지 마세요.'; writable=' 마지막 메시지는 5줄 이내 요약만 작성하세요.'}
         en=@{task='Task, Card, and Out are required'; fail='Run failed'; instruction='Read task card {0} and follow it. Output artifact: {1}. Write scope: {2}. {3}`nTask card (UTF-8):`n{4}'; readonly=' Return the full result in your final message; the wrapper saves it to Out. Do not edit files.'; writable=' Last message: summary only, at most five lines.'}
     }
+    $table.ko.model='Model 값이 올바르지 않습니다'
+    $table.en.model='Invalid Model value'
+    $table.ko.effort='Effort 값이 올바르지 않습니다'
+    $table.en.effort='Invalid Effort value'
+    $table.ko.path='경로에 큰따옴표를 사용할 수 없습니다'
+    $table.en.path='A path contains a double quote'
     return $table[$lang]
 }
 function Quote([string]$s) { '"'+$s.Replace('"','\"')+'"' }
@@ -45,19 +51,25 @@ try {
             if ($s.sandbox -eq 'read-only' -and $exit -eq 0 -and $data -and !$data.is_error) { [IO.File]::WriteAllText($s.out,[string]$data.result,$utf8) }
         } catch { $note=$_.Exception.Message }
         $exists=Test-Path -LiteralPath $s.out -PathType Leaf
-        $result=if ($exit -eq 0 -and $data -and !$data.is_error -and $exists) {'ok'} else {'fail'}
+        $message=if ($data) {[string]$data.result} else {''}
+        $lines=@($message -split "`r?`n" | Where-Object { $_.Trim() })
+        $stopped=$lines.Count -gt 0 -and $lines[0] -cmatch '^STOPPED:'
+        $result=if ($stopped) {'stopped'} elseif ($exit -eq 0 -and $data -and !$data.is_error -and $exists) {'ok'} else {'fail'}
+        $summary=if ($stopped) { (@($lines[0]) + @(@($lines | Select-Object -Skip 1) | Select-Object -Last 4)) -join "`n" } else { (@($lines | Select-Object -Last 5)) -join "`n" }
         $session=if ($data) {[string]$data.session_id} else {''}
         if (!$note -and $result -eq 'fail' -and (Test-Path -LiteralPath $s.err)) { $note=([IO.File]::ReadAllText($s.err,[Text.Encoding]::UTF8) -split "`r?`n" | Select-Object -First 2) -join ' ' }
         $record=@{ts=[datetime]::Now.ToString('o');task=$s.task;round=$s.round;model=$s.model;effort=$s.effort;result=$result;escalated_from=$null;workers=$null;out=(Relative $s.out $root);session=$session;tokens=$tokens;decided_by=$s.decided_by;note=$note;cost=$(if ($data) {$data.total_cost_usd} else {$null})}
         $log=Join-Path $s.docs 'log/runs.jsonl'; [IO.Directory]::CreateDirectory((Split-Path $log)) | Out-Null
         [IO.File]::AppendAllText($log,($record | ConvertTo-Json -Compress -Depth 8)+"`n",$utf8)
-        $message=if ($data) {[string]$data.result} else {''}
-        $done=@{result=$result;exit=$exit;out_exists=$exists;summary=($message -split "`r?`n" | Where-Object { $_ } | Select-Object -Last 5) -join "`n";session=$session;tokens=$tokens}
+        $done=@{result=$result;exit=$exit;out_exists=$exists;summary=$summary;session=$session;tokens=$tokens}
         [IO.File]::WriteAllText($RunnerState+'.done.json',($done | ConvertTo-Json -Compress -Depth 8),$utf8)
         exit 0
     }
     if ($Wait) { WaitDone (Join-Path $stateDir ($Wait+'.state.json')) $WaitSeconds; exit 0 }
     if (!$Task -or !$Card -or !$Out) { Write-Output "status=fail $($m.task)"; exit 0 }
+    if ($Model -cnotin @('sonnet','opus','haiku')) { Write-Output "status=fail $($m.model)"; exit 0 }
+    if ($Effort -cnotmatch '^[a-z]+$') { Write-Output "status=fail $($m.effort)"; exit 0 }
+    if (@($root,$Card,$Out) | Where-Object { $_.Contains('"') }) { Write-Output "status=fail $($m.path)"; exit 0 }
     [IO.Directory]::CreateDirectory($stateDir) | Out-Null
     $safe=(($Task+'-'+$Round) -replace '[^A-Za-z0-9_-]','_')
     $mutex=[Threading.Mutex]::new($false,'Local\Tandem-claude-'+[Convert]::ToBase64String([Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($root+'|'+$safe))).Substring(0,32).Replace('/','_'))

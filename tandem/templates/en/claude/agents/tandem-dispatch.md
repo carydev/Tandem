@@ -9,6 +9,7 @@ Invoke tandem/tools/codex-run.ps1 -Task <ID> -Round <R1|R2|R3|single> -Card <pat
 For R2, use a model different from R1 and -Sandbox read-only. Use workspace-write for the other rounds.
 The wrapper appends the log. Do not call codex exec directly, write runs.jsonl directly, poll with tail or ls or status files, or open the content.
 If it returns RUNNING <run-id>, wait with codex-run.ps1 -Wait <run-id>. For R2, the wrapper saves the full final message to the Out path. Instruct the reviewer to put the full review in the final message, starting with a summary in the first five lines. Return only the status, paths, model, effort, the first five summary lines, and any warning about changes outside scope.
+If the status is `stopped`, include the `STOPPED:` line unchanged in the return.
 Do not conceal the original failure or substitute a model on your own.
 If a Jev result has reason `insufficient_credits` or `invalid_key`, use the routing table and pass its `notice` unchanged to the main agent for a once-per-session user notice.
 

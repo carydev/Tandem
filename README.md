@@ -62,6 +62,12 @@ All roles clarify assumptions, keep solutions simple, and edit only what the tas
 
 Execution wrappers wait without repeated polling and log calls automatically. Unspecified Claude subagents default to `sonnet` through `CLAUDE_CODE_SUBAGENT_MODEL`. Session rules keep related work together and start a new session for unrelated work; efficiency rules limit reading and test output to what the task needs.
 
+### Official Codex plugin
+
+OpenAI offers [codex-plugin-cc](https://github.com/openai/codex-plugin-cc) for Codex reviews and task delegation inside Claude Code.
+TANDEM does not require this plugin; its own `codex-run.ps1` wrapper handles task cards, token logs, and model routing.
+As of 2026-10-14, Windows review mode and shell calls have unresolved issues: [#57](https://github.com/openai/codex-plugin-cc/issues/57), [#295](https://github.com/openai/codex-plugin-cc/issues/295).
+
 ### Jev (optional)
 
 Jev is TypeSafe's decision-only model through OpenRouter. It chooses a model and reasoning effort, whether to escalate, and whether cross-review is needed. It does **not** judge artifact acceptance or decide G1/G2. Without a key, TANDEM works as in v1.0 using its routing table.

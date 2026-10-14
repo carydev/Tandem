@@ -21,5 +21,5 @@ Source: Karpathy rules summary at github.com/forrestchang/andrej-karpathy-skills
 Find relevant paths and the table of contents first, then read only the sections you need. Read generated files and large logs only when necessary.
 Do not reread the same file without a reason. For builds and tests, check the exit code and nearby errors first.
 Run only relevant tests, then broaden them according to the impact. Avoid long plans and automatically assigning many workers.
-If retries repeatedly make no progress, stop and report the cause and where you are blocked. Stop after the same failure 3 times and record the blocker in the deliverable.
+If retries repeatedly make no progress, stop and report the cause and where you are blocked. Stop after the same failure 3 times and record the blocker in the deliverable. Start the first line of the final message (summary) with `STOPPED: <one-line cause>`.
 """

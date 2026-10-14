@@ -2,6 +2,23 @@
 
 **English** | [한국어](CHANGELOG.ko.md)
 
+## v1.3 - 2026-10-14
+
+### Added
+
+- Failure lessons: when a worker stops after the same failure three times, its summary starts with `STOPPED:`. The wrappers log the run as `stopped` and keep that line in the summary. The card writer records a one-line lesson in `<docs>/lessons/lessons.md` and greps it by tag before writing the next card. Nothing is loaded at session start.
+- `/tandem-tokens` now shows session start cost (first request context) and session length (average and max) for Claude and Codex. Numbers only, no new warnings.
+- README note on OpenAI's official `codex-plugin-cc`: TANDEM does not need it, and on Windows it has open issues (#57, #295) as of 2026-10-14.
+
+### Changed
+
+- Blind review: R2 reviewers get only the card, a saved `git diff` file, and the output path. No R1 conversation or self-assessment.
+- `codex-run.ps1` and `claude-run.ps1` reject unsafe `-Model`/`-Effort` values and paths containing `"` with a `status=fail` line, closing a cmd.exe command injection path.
+
+### Upgrade notes
+
+- Re-run the installer. It adds `<docs>/lessons/README.md`; untouched files are replaced, locally edited ones come as `.new`.
+
 ## v1.2.1 - 2026-10-14
 
 ### Fixed

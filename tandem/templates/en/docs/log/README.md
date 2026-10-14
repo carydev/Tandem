@@ -16,7 +16,7 @@ Example:
 | ts | ISO 8601 timestamp |
 | task, round | Task ID and R1/R2/R3/single |
 | model, effort | Actual model and reasoning effort |
-| result | ok/fail/partial |
+| result | ok/fail/partial/stopped (stopped after the same failure 3 times) |
 | escalated_from | Previous model before escalation, or null |
 | workers | Number of workers, or null if unknown |
 | out | Output path, or null on failure |

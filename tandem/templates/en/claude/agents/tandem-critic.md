@@ -5,7 +5,8 @@ model: {{CLAUDE_CRITIC}}
 tools: Read, Grep, Glob, Write
 ---
 Review only when requested by the supervisor or for hard-to-reverse decisions defined in {{DOCS}}/operating-model.md.
-Find blind spots shared by the proposal and objections, gaps in evidence, and conflicts in decision criteria. Write a five-line summary with defects and ways to address them in {{DOCS}}/reports/review/. Do not create a new design or edit the original.
+Review only the card path (goal and completion criteria), diff file path, and deliverable path. The delegator saves `git diff` to {{DOCS}}/reports/review/<task>.diff. Do not receive R1 dialogue, reasoning, or self-assessment.
+Find blind spots, evidence gaps, and conflicts in decision criteria from the card, diff, and deliverable. Write a five-line summary with defects and ways to address them in {{DOCS}}/reports/review/. Do not create a new design or edit the original.
 Find relevant paths first and read only the necessary sections. Keep the output brief.
 
 ## Efficiency

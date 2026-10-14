@@ -37,6 +37,7 @@ try {
     $since=(Get-Date).AddDays(-$Days)
     $lang=if ($config.lang -eq 'en') {'en'} else {'ko'}
     $groups=@{}; $mainContexts=[Collections.Generic.List[double]]::new(); $subRequests=[Collections.Generic.List[int]]::new()
+    $claudeStarts=[Collections.Generic.List[long]]::new(); $mainRequests=[Collections.Generic.List[int]]::new()
     $claudeSessions=0; $subCount=0; $nonTandem=[double]0; $allClaude=[double]0
     $encoded=[regex]::Replace($project,'[^A-Za-z0-9]','-')
     $claudeRoot=[IO.Path]::GetFullPath((Join-Path $env:USERPROFILE ('.claude/projects/'+$encoded)))
@@ -63,23 +64,28 @@ try {
                     AddGroup "$role|$model" $inTokens $write $read $output
                     $eq=$inTokens+1.25*$write+0.1*$read+5*$output; $allClaude+=$eq
                     if ($sub -and $role -notmatch '(?i)tandem|general-purpose|explore') { $nonTandem+=$eq }
-                    if (!$sub) { $mainContexts.Add($inTokens+$write+$read) }
+                    if (!$sub) {
+                        $context=$inTokens+$write+$read
+                        $mainContexts.Add($context)
+                        if ($requests -eq 0) { $claudeStarts.Add($context) }
+                    }
                     $requests++
                 }
             } catch { Write-Warning (LocalMessage "Claude 파일을 읽지 못했습니다: $($file.Name)" "Could not read Claude file: $($file.Name)") }
             finally { if ($reader) { $reader.Dispose() } }
-            if ($sub) { $subRequests.Add($requests) }
+            if ($sub) { $subRequests.Add($requests) } else { $mainRequests.Add($requests) }
         }
     }
     $codexRoot=Join-Path $env:USERPROFILE '.codex/sessions'
     $codexSessions=0; $codexUnreadable=0; $turns=[long]0; $toolBytes=[long]0; $modelDist=@{}; $effortDist=@{}; $topInput=[long]0; $allCodexInput=[long]0
+    $codexStarts=[Collections.Generic.List[long]]::new(); $codexTurnCounts=[Collections.Generic.List[int]]::new()
     if (Test-Path $codexRoot) {
         $dates=0..$Days | ForEach-Object { (Get-Date).AddDays(-$_).ToString('yyyy/MM/dd',[Globalization.CultureInfo]::InvariantCulture) }
         foreach ($date in $dates) {
             $folder=Join-Path $codexRoot $date
             if (!(Test-Path $folder)) { continue }
             foreach ($file in (Get-ChildItem $folder -Filter 'rollout-*.jsonl' -File -ErrorAction SilentlyContinue)) {
-                $belongs=$false; $model='unknown'; $effort='unknown'; $lastUsage=$null; $sessionTurns=0; $sessionBytes=[long]0
+                $belongs=$false; $model='unknown'; $effort='unknown'; $lastUsage=$null; $sessionTurns=0; $sessionBytes=[long]0; $firstTokenCount=$false
                 $reader=$null
                 try {
                     $reader=OpenLines $file.FullName
@@ -95,6 +101,12 @@ try {
                             $model=FieldIn $line 'model'; $effort=FieldIn $line 'effort'
                             if (!$effort) { $effort=FieldIn $line 'model_effort' }
                         }
+                        if (!$firstTokenCount -and $line.Contains('"token_count"') -and $line.Contains('"input_tokens"')) {
+                            $firstTokenCount=$true
+                            $startMatch=[regex]::Match($line,'"last_token_usage"\s*:\s*\{')
+                            $startAt=if ($startMatch.Success) { $startMatch.Index } else { $line.IndexOf('"total_token_usage"') }
+                            if ($startAt -ge 0) { $codexStarts.Add((NumberIn $line.Substring($startAt,[Math]::Min(350,$line.Length-$startAt)) 'input_tokens')) }
+                        }
                         if ($line.Contains('"token_count"') -and $line.Contains('"total_token_usage"')) {
                             $sessionTurns++; $at=$line.IndexOf('"total_token_usage"')
                             $lastUsage=$line.Substring($at,[Math]::Min(350,$line.Length-$at))
@@ -104,7 +116,7 @@ try {
                 } catch { $codexUnreadable++; continue }
                 finally { if ($reader) { $reader.Dispose() } }
                 if (!$belongs) { continue }
-                $codexSessions++; $turns+=$sessionTurns; $toolBytes+=$sessionBytes
+                $codexSessions++; $turns+=$sessionTurns; $toolBytes+=$sessionBytes; $codexTurnCounts.Add($sessionTurns)
                 if (!$modelDist.ContainsKey($model)) { $modelDist[$model]=0 }; $modelDist[$model]++
                 if (!$effortDist.ContainsKey($effort)) { $effortDist[$effort]=0 }; $effortDist[$effort]++
                 if ($lastUsage) {
@@ -124,6 +136,13 @@ try {
     $avgSub=if ($subRequests.Count) { [math]::Round(($subRequests | Measure-Object -Average).Average,1) } else { 0 }
     $avgTurns=if ($codexSessions) { [math]::Round($turns/$codexSessions,1) } else { 0 }
     $avgBytes=if ($codexSessions) { [math]::Round($toolBytes/$codexSessions/1024) } else { 0 }
+    $avgClaudeStart=if ($claudeStarts.Count) { [math]::Round(($claudeStarts | Measure-Object -Average).Average) } else { 0 }
+    $maxClaudeStart=if ($claudeStarts.Count) { ($claudeStarts | Measure-Object -Maximum).Maximum } else { 0 }
+    $avgCodexStart=if ($codexStarts.Count) { [math]::Round(($codexStarts | Measure-Object -Average).Average) } else { 0 }
+    $maxCodexStart=if ($codexStarts.Count) { ($codexStarts | Measure-Object -Maximum).Maximum } else { 0 }
+    $avgMainRequests=if ($mainRequests.Count) { [math]::Round(($mainRequests | Measure-Object -Average).Average,1) } else { 0 }
+    $maxMainRequests=if ($mainRequests.Count) { ($mainRequests | Measure-Object -Maximum).Maximum } else { 0 }
+    $maxCodexTurns=if ($codexTurnCounts.Count) { ($codexTurnCounts | Measure-Object -Maximum).Maximum } else { 0 }
     $diagnosis=[Collections.Generic.List[string]]::new()
     if ($avgContext -gt 150000) { $diagnosis.Add($(if ($lang -eq 'ko') {'메인 맥락 과다: 무관한 작업은 새 세션 또는 /clear, 같은 작업은 이어서 진행하고 인계 문서를 작성하세요.'} else {'Main context high: start unrelated work in a new session or /clear; write a handoff before switching.'})) }
     if ($allClaude -and $nonTandem/$allClaude -gt .3 -and $config.mode -in @('claude-main','codex-main')) { $diagnosis.Add((LocalMessage 'TANDEM 외 Claude 서브에이전트가 환산 토큰의 30%를 넘습니다. 실무를 Codex에 위임하세요.' 'Non-TANDEM Claude subagents exceed 30%; delegate implementation to Codex.')) }
@@ -143,6 +162,9 @@ try {
     $lines.Add((LocalMessage "기간: $Days 일. 환산 토큰은 상대 비교용 추정치입니다." "Period: $Days days. Equivalent tokens are relative comparison estimates."))
     $lines.Add((LocalMessage "Claude 메인 세션: $claudeSessions; 하위 에이전트: $subCount; 메인 요청당 평균 맥락: $avgContext; 하위 호출당 평균 요청: $avgSub" "Claude main sessions: $claudeSessions; subagents: $subCount; average main context/request: $avgContext; average subagent requests/call: $avgSub"))
     $lines.Add((LocalMessage "Codex 세션: $codexSessions; 읽기 실패: $codexUnreadable; 세션당 턴: $avgTurns; 세션당 도구 출력(KB): $avgBytes; runs.jsonl: $runs" "Codex sessions: $codexSessions; unreadable: $codexUnreadable; turns/session: $avgTurns; tool output KB/session: $avgBytes; runs.jsonl: $runs"))
+    $lines.Add((LocalMessage "세션 시작 비용(첫 요청 맥락): Claude 평균 $avgClaudeStart / 최대 $maxClaudeStart, Codex 평균 $avgCodexStart / 최대 $maxCodexStart" "Session start cost (first request context): Claude average $avgClaudeStart / maximum $maxClaudeStart, Codex average $avgCodexStart / maximum $maxCodexStart"))
+    $lines.Add((LocalMessage "세션 길이(요청 수): Claude 평균 $avgMainRequests / 최대 $maxMainRequests, Codex 턴 평균 $avgTurns / 최대 $maxCodexTurns" "Session length (requests): Claude average $avgMainRequests / maximum $maxMainRequests, Codex turns average $avgTurns / maximum $maxCodexTurns"))
+    $lines.Add((LocalMessage '이어하기·압축된 세션은 시작 비용이 크게 잡힐 수 있습니다.' 'Resumed or compacted sessions may show a high start cost.'))
     $lines.Add(''); $lines.Add((LocalMessage '| 역할 / 모델 | 요청 | 입력 | 캐시 쓰기 | 캐시 읽기 | 출력 | 환산 |' '| Role / model | Requests | Input | Cache write | Cache read | Output | Equivalent |')); $lines.Add('|---|---:|---:|---:|---:|---:|---:|')
     foreach ($key in ($groups.Keys | Sort-Object)) { $g=$groups[$key]; $displayKey=$key.Replace('|',' / '); $lines.Add("| $displayKey | $($g.requests) | $($g.input) | $($g.write) | $($g.read) | $($g.output) | $([math]::Round($g.equivalent)) |") }
     $lines.Add(''); $lines.Add((LocalMessage 'Codex 모델: ' 'Codex models: ')+(($modelDist.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join ', '))
@@ -151,7 +173,7 @@ try {
     $dir=Split-Path -Parent $Out; if (!(Test-Path $dir)) { New-Item -ItemType Directory $dir -Force | Out-Null }
     [IO.File]::WriteAllText($Out,($lines -join "`n")+"`n",[Text.UTF8Encoding]::new($false))
     $watch.Stop()
-    $summary=@($lines[0],$lines[2],$lines[3],((LocalMessage '보고서: ' 'Report: ')+$Out),((LocalMessage '소요 시간: {0:n1}초' 'Elapsed: {0:n1}s') -f $watch.Elapsed.TotalSeconds))
+    $summary=@($lines[0],$lines[2],$lines[3],$lines[4],$lines[5],((LocalMessage '보고서: ' 'Report: ')+$Out),((LocalMessage '소요 시간: {0:n1}초' 'Elapsed: {0:n1}s') -f $watch.Elapsed.TotalSeconds))
     $summary+=$diagnosis | Select-Object -First 30
     [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)
     $summary | Select-Object -First 40

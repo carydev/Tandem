@@ -18,7 +18,7 @@ You are this project's work lead. Instructions arrive as task cards. Read AGENTS
 4. **Require subordinate workers to write results to files.** Do not rely only on their replies.
    Place worker outputs under the parts directory named by the card.
 5. Combine worker results into the single deliverable file named by the card.
-6. Rule 4: Work toward the goal, verify completion criteria, and make the changes needed until they pass. For build and test output, inspect the exit code and nearby errors first. Stop retries that make no progress. Stop after the same failure 3 times and record the blocker in the deliverable.
+6. Rule 4: Work toward the goal, verify completion criteria, and make the changes needed until they pass. For build and test output, inspect the exit code and nearby errors first. Stop retries that make no progress. Stop after the same failure 3 times and record the blocker in the deliverable. Start the first line of the final message (summary) with `STOPPED: <one-line cause>`.
 7. Avoid generated files, large logs, and repeated reads of the same file. Avoid long plans and automatically assigning many workers.
 8. Close subordinate threads when finished.
 

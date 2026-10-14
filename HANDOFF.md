@@ -11,7 +11,7 @@
 - 저장소: `https://github.com/carydev/Tandem`
 - 소유자: carydev
 - 라이선스: MIT
-- 버전: v1.2 (`VERSION` 파일이 기준. 업데이트 알림이 이 파일을 본다)
+- 버전: v1.3 (`VERSION` 파일이 기준. 업데이트 알림이 이 파일을 본다)
 
 **이 저장소 자체에는 TANDEM이 설치돼 있지 않다.** 여기는 남에게 나눠 줄 템플릿을 담는 곳이다.
 `.gitignore`가 설치 결과물(`docs/tandem/`, `tandem/config.json`, `tandem/manifest.json`)을 막고 있다. 이건 의도된 것이다.
@@ -58,6 +58,10 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 | 사용자가 고르지 않은 언어는 절대 보이지 않음 (선택 전엔 Windows 표시 언어, `boot.ps1`은 유니코드 이스케이프로 ASCII 유지) | 사용자 요구(2026-10-13). 검사: `.work/v1.2/lang-check.ps1` (배포 안 함) |
 | Jev 끄기는 config에 저장 (`-NoJev`/`-UseJev`) | Jev를 원치 않는 사용자에게 질문·알림·호출이 전혀 없어야 한다 |
 | 메인의 사용자 응대 최우선 규칙 3개 | 사용자 요구(2026-10-13): 선택 언어로 대답, 분기점 설명, 완료 보고는 간결 |
+| 실패 교훈은 카드 작성자가 `lessons/lessons.md`에 한 줄, 상시 로드 안 함 (카드 쓸 때 태그 grep) | 사용자 결정(2026-10-14): 메인 쪽이 기록. 상시 로드하면 시작 비용이 늘어난다. 설치는 README만 (데이터 파일이 `.new`를 만들지 않게) |
+| 규칙 4 멈춤은 요약 첫 줄 `STOPPED:`, 래퍼가 `stopped`로 기록 | 래퍼는 산출물만 있으면 ok, 요약은 마지막 5줄이라 멈춤이 위로 안 올라갔다 |
+| R2 검토 입력은 카드 + diff 파일 + 산출물 경로만 | 과정 모르는 검토가 결함을 더 찾는다는 실사용 보고. 읽기 전용 검토자가 셸을 못 쓰는 환경 대비해 diff는 파일로 |
+| 래퍼 `-Model`/`-Effort` 정규식 검증 (try 안, `status=fail`) | `codex.cmd`/`claude.cmd`는 cmd.exe를 거쳐 `&` 등으로 명령 주입 가능. ValidateSet은 try 밖 오류라 전달책이 못 읽음 |
 
 ## 검증된 것 (v1.1, 2026-10-13, Windows PowerShell 5.1.19041)
 
@@ -69,9 +73,16 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - `check.ps1`: 알림 JSON(ASCII 이스케이프), 네트워크 실패 시 조용함, exit 0
 - R2 적대 검토(gpt-6-astra) 15개 지적 전부 반영 후 재검증 (설치기 C6a, 도구 C6b, 템플릿 C6c 각 보고서 `.work/`는 배포 안 함)
 
+## 검증된 것 (v1.3, 2026-10-14)
+
+- 4개 모드 × 2개 언어 설치 + 언어 섞임 검사(`.work/v1.2/lang-check.ps1`) 통과. v1.2 설치본 위 업그레이드: lessons README 추가, `.new` 0개 (C13)
+- 가짜 `codex.cmd`로 래퍼 끝까지 실행: `STOPPED:` 긴/짧은 요약 → `stopped` + 첫 줄 유지, 일반 → `ok`. `-Effort 'low&echo x> ...'` 차단, 파일 미생성
+- `token-report.ps1` 시작 비용·세션 길이: 원본 jsonl 수동 계산과 일치 (C14)
+- 주의: lang-check의 Jev `no_key` 항목은 사용자 환경변수에 키가 생긴 뒤로 실패한다 (검사 전제가 키 없음). 제품 결함 아님
+
 ## 검증 안 된 것 (남은 일)
 
-- **Jev 실제 호출**: 키가 없어 `-DryRun`·키 없음·응답 검증 함수만 확인
+- **Jev 실제 호출**: 2026-10-14 사용자 키가 생겼다. lang-check의 빈 요청(`{}`)은 `reason=error`로 끝났다 - 실제 카드로 `-Route` 시험 필요
 - **Codex 훅**: `.codex/hooks.json`은 프로젝트 신뢰 + `/hooks` 승인 후에만 돈다. 실제 Codex 세션에서 알림 표시 미확인
 - **Claude 훅 알림 표시**: settings 병합까지만 확인. 실제 세션 시작 화면 표시 미확인
 - `codex login` 브라우저 흐름, winget 설치 (v1.0부터 미검증)
@@ -108,6 +119,7 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 
 - [x] **v1.2** (2026-10-13): Jev 잔액 부족(402)·키 오류(401) 안내 + 배치표 대체 + 다음 세션 알림, Jev 끄기/켜기(`-NoJev`/`-UseJev`, 저장됨), 사용자 언어 일관성(전 출력), README Jev 절
       - Codex 카드 C10-C12. 검증: 4모드×2언어 통합 시험, 언어 검사(가짜 서버 시작 타이밍 때문에 402 항목이 가끔 실패 - 기능 결함 아님, 재실행 2회 통과)
+- [x] **v1.3** (2026-10-14): 커뮤니티 조사 반영 - 실패 교훈 기록(`STOPPED:` 표식), 토큰 보고서 시작 비용·세션 길이, 과정 모르는 R2 검토, 래퍼 명령 주입 차단, README 공식 Codex 플러그인 안내
 - [ ] **보류** 플러그인 방식 배포 (Claude `/plugin`, Codex `codex plugin`) - 한 줄 설치는 공식 마켓플레이스 심사가 필요해 보류. 계획: `docs/plan-plugin-distribution.md`
 
 ## 지키면 좋을 것
