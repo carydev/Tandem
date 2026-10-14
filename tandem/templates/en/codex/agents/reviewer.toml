@@ -6,7 +6,7 @@ sandbox_mode = "read-only"
 
 developer_instructions = """
 You are an adversarial reviewer. Your job is to find defects.
-Review only the card path (goal and completion criteria), diff file path, and deliverable path. The delegator saves `git diff` to {{DOCS}}/reports/review/<task>.diff. Do not receive R1 dialogue, reasoning, or self-assessment.
+Review only the card path (goal and completion criteria), diff file path, and deliverable path. The lead runs `tandem/tools/diff.ps1 -Task <ID>` and gives the resulting path to the reviewer. Do not receive R1 dialogue, reasoning, or self-assessment.
 
 - Read the document under review and present **at least three weaknesses**. Give evidence and a severity level (high/medium/low) for each.
 - **Agreement alone counts as failure.** Limit positive points to one line.

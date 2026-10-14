@@ -15,6 +15,10 @@ function Messages([string]$root) {
     $table.en.effort='Invalid Effort value'
     $table.ko.path='경로에 큰따옴표를 사용할 수 없습니다'
     $table.en.path='A path contains a double quote'
+    $table.ko.diff='변경분: '
+    $table.en.diff='Changes: '
+    $table.ko.noDiff='변경분 없음'
+    $table.en.noDiff='Changes unavailable'
     return $table[$lang]
 }
 function Quote([string]$s) { '"'+$s.Replace('"','\"')+'"' }
@@ -83,6 +87,15 @@ try {
         $cardText=Get-Content -LiteralPath $cardFull -Raw -Encoding UTF8
         $scope=([regex]::Match($cardText,'(?ms)^##\s*(쓰기 범위|Write scope)[^\r\n]*\r?\n(.*?)(?=^##\s|\z)')).Groups[2].Value.Trim()
         $instruction=$m.instruction.Replace('{0}',$cardFull).Replace('{1}',$outFull).Replace('{2}',$scope).Replace('{3}',[string]$Prompt).Replace('{4}',$cardText).Replace('`n',"`n")
+        if ($Round -eq 'R2') {
+            $diffPath=''
+            try {
+                Push-Location $root
+                try { $candidate=& (Join-Path $PSScriptRoot 'diff.ps1') -Task $Task 2>$null; if ($LASTEXITCODE -ne 0) { throw 'diff failed' }; $diffPath=[string]($candidate | Select-Object -Last 1); if (!(Test-Path -LiteralPath $diffPath -PathType Leaf)) { throw 'diff missing' } }
+                finally { Pop-Location }
+            } catch { $diffPath='' }
+            $instruction+="`n"+$(if ($diffPath) { $m.diff+$diffPath } else { $m.noDiff })+"`n"
+        }
         if ($Sandbox -eq 'read-only') { $instruction+=$m.readonly } else { $instruction+=$m.writable }
         $stem=Join-Path $stateDir $id; $statePath=$stem+'.state.json'
         [IO.File]::WriteAllText($stem+'.prompt',$instruction,$utf8)
