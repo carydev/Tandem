@@ -121,6 +121,8 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - [x] **v1.2** (2026-10-13): Jev 잔액 부족(402)·키 오류(401) 안내 + 배치표 대체 + 다음 세션 알림, Jev 끄기/켜기(`-NoJev`/`-UseJev`, 저장됨), 사용자 언어 일관성(전 출력), README Jev 절
       - Codex 카드 C10-C12. 검증: 4모드×2언어 통합 시험, 언어 검사(가짜 서버 시작 타이밍 때문에 402 항목이 가끔 실패 - 기능 결함 아님, 재실행 2회 통과)
 - [x] **v1.3** (2026-10-14): 커뮤니티 조사 반영 - 실패 교훈 기록(`STOPPED:` 표식), 토큰 보고서 시작 비용·세션 길이, 과정 모르는 R2 검토, 래퍼 명령 주입 차단, README 공식 Codex 플러그인 안내
+      - Codex 카드 C13-C17. 원격에 있던 v1.2.1(PowerShell 도구 UTF-8 콘솔 출력) 위로 rebase. 태그 `v1.3` + GitHub Releases 생성
+      - 배포 검증: 원격 VERSION 1.3, 실제 URL 한 줄 설치(codex-main, en) 성공, v1.2 설치본에서 업데이트 알림 "1.2 -> 1.3"
 - [ ] **보류** 플러그인 방식 배포 (Claude `/plugin`, Codex `codex plugin`) - 한 줄 설치는 공식 마켓플레이스 심사가 필요해 보류. 계획: `docs/plan-plugin-distribution.md`
 
 ## 지키면 좋을 것
