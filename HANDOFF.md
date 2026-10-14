@@ -27,7 +27,7 @@ tandem/
   files.json                 파일 계약: 무엇을 어느 모드에 어디로 놓는가
   templates/ko/, en/         언어별 템플릿 (상대 경로 구조 동일)
     claude/ codex/ docs/ blocks/ settings.json adapt.md
-  tools/*.ps1                설치 대상에 그대로 복사되는 도구 (check, token-report, jev, manifest, codex-run, claude-run)
+  tools/*.ps1                설치 대상에 그대로 복사되는 도구 (check, token-report, jev, manifest, diff, codex-run, claude-run)
 docs/plan-plugin-distribution.md  보류된 플러그인 배포 계획
 docs/design-v1.1.md          v1.1 설계서 (모드, 렌더링, 지문 업데이트, 훅, Jev, 리포트, 래퍼)
 README.md / README.ko.md     사용자 문서 (영어 기본 / 한국어). 함께 고친다
@@ -60,7 +60,7 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 | 메인의 사용자 응대 최우선 규칙 3개 | 사용자 요구(2026-10-13): 선택 언어로 대답, 분기점 설명, 완료 보고는 간결 |
 | 실패 교훈은 카드 작성자가 `lessons/lessons.md`에 한 줄, 상시 로드 안 함 (카드 쓸 때 태그 grep) | 사용자 결정(2026-10-14): 메인 쪽이 기록. 상시 로드하면 시작 비용이 늘어난다. 설치는 README만 (데이터 파일이 `.new`를 만들지 않게) |
 | 규칙 4 멈춤은 요약 첫 줄 `STOPPED:`, 래퍼가 `stopped`로 기록 | 래퍼는 산출물만 있으면 ok, 요약은 마지막 5줄이라 멈춤이 위로 안 올라갔다 |
-| R2 검토 입력은 카드 + diff 파일 + 산출물 경로만 | 과정 모르는 검토가 결함을 더 찾는다는 실사용 보고. 읽기 전용 검토자가 셸을 못 쓰는 환경 대비해 diff는 파일로 |
+| R2 검토 입력은 카드 + 변경분 파일(`diff.ps1`, 새 파일 포함, 인덱스 무변경) + 산출물 경로만. 래퍼 모드는 R2에서 자동 첨부 | 과정 모르는 검토가 결함을 더 찾는다는 실사용 보고. 읽기 전용 검토자가 셸을 못 쓰는 환경 대비해 diff는 파일로 |
 | 래퍼 `-Model`/`-Effort` 정규식 검증 (try 안, `status=fail`) | `codex.cmd`/`claude.cmd`는 cmd.exe를 거쳐 `&` 등으로 명령 주입 가능. ValidateSet은 try 밖 오류라 전달책이 못 읽음 |
 
 ## 검증된 것 (v1.1, 2026-10-13, Windows PowerShell 5.1.19041)
@@ -78,11 +78,12 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - 4개 모드 × 2개 언어 설치 + 언어 섞임 검사(`.work/v1.2/lang-check.ps1`) 통과. v1.2 설치본 위 업그레이드: lessons README 추가, `.new` 0개 (C13)
 - 가짜 `codex.cmd`로 래퍼 끝까지 실행: `STOPPED:` 긴/짧은 요약 → `stopped` + 첫 줄 유지, 일반 → `ok`. `-Effort 'low&echo x> ...'` 차단, 파일 미생성
 - `token-report.ps1` 시작 비용·세션 길이: 원본 jsonl 수동 계산과 일치 (C14)
-- 주의: lang-check의 Jev `no_key` 항목은 사용자 환경변수에 키가 생긴 뒤로 실패한다 (검사 전제가 키 없음). 제품 결함 아님
+- `diff.ps1`: 한글 내용·한글 파일명, 새 파일 포함, .gitignore 제외, 커밋 없는 저장소 확인 (C17 + 수동)
+- **Jev 실제 호출 성공** (2026-10-14, 사용자 승인): C14 카드로 `-Route` → effort low(0.85), tier mid(0.37 < 0.6) → `low_confidence`로 배치표 대체. 1회 약 $0.00002
+- 주의: 사용자 환경변수에 키가 생긴 뒤로 **lang-check를 돌릴 때마다 실제 Jev 호출이 1회 나간다**(빈 요청 `{}` → `reason=error`, 검사 전제가 키 없음이라 그 항목은 실패). 제품 결함 아님
 
 ## 검증 안 된 것 (남은 일)
 
-- **Jev 실제 호출**: 2026-10-14 사용자 키가 생겼다. lang-check의 빈 요청(`{}`)은 `reason=error`로 끝났다 - 실제 카드로 `-Route` 시험 필요
 - **Codex 훅**: `.codex/hooks.json`은 프로젝트 신뢰 + `/hooks` 승인 후에만 돈다. 실제 Codex 세션에서 알림 표시 미확인
 - **Claude 훅 알림 표시**: settings 병합까지만 확인. 실제 세션 시작 화면 표시 미확인
 - `codex login` 브라우저 흐름, winget 설치 (v1.0부터 미검증)

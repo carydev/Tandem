@@ -12,7 +12,7 @@
 
 ### Changed
 
-- Blind review: R2 reviewers get only the card, a saved `git diff` file, and the output path. No R1 conversation or self-assessment.
+- Blind review: R2 reviewers get only the card, a changes file, and the output path. No R1 conversation or self-assessment. The new `tandem/tools/diff.ps1` writes the changes file (including new untracked files, without touching the git index); the wrappers attach it automatically on `-Round R2`.
 - `codex-run.ps1` and `claude-run.ps1` reject unsafe `-Model`/`-Effort` values and paths containing `"` with a `status=fail` line, closing a cmd.exe command injection path.
 
 ### Upgrade notes
