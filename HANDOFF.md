@@ -142,6 +142,7 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
       - 배포 검증: 원격 VERSION 1.3, 실제 URL 한 줄 설치(codex-main, en) 성공, v1.2 설치본에서 업데이트 알림 "1.2 -> 1.3"
 - [x] **v1.4** (2026-10-19): 서브 최상위 모델 제한 - 단계표(fable→opus→sonnet→haiku)와 팀장 기본값 `claude_manager`(총괄 바로 아래), 래퍼 게이트 `-EscalatedFrom`/`-Reason`, runs.jsonl `reason` 필드, Jev top 제외, 토큰 보고서 최상위 사용 수치, R2·reviewer·critic mid, claude-main config.toml 기본 mid, `fable` 별칭, 규칙 문서화(model-routing.md '최상위 모델 사용 규칙')
       - Codex 카드 C18-C21 (`.work/v1.4/`). C19가 claude-worker.md(일꾼 시스템 프롬프트)에 래퍼 호출 문장을 넣어서 빼고 delegation.md codex-main 절로 옮김. Codex 실행 중 Claude Code가 메모리 부족으로 배경 셸을 3번 죽였지만 Codex 프로세스는 살아서 완료 (파일 감시로 대기)
+      - 배포 검증: 원격 VERSION 1.4, 실제 URL 설치(claude-main, en) 성공 - config에 claude_manager=sonnet, model-routing.md에 Top-model policy, .codex/config.toml 기본 model=MID. 태그 `v1.4` + GitHub Releases 생성
 - [ ] **보류** 플러그인 방식 배포 (Claude `/plugin`, Codex `codex plugin`) - 한 줄 설치는 공식 마켓플레이스 심사가 필요해 보류. 계획: `docs/plan-plugin-distribution.md`
 
 ## 지키면 좋을 것
