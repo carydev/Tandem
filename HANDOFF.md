@@ -163,6 +163,8 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - [x] **v1.5** (2026-10-19): 토큰 효율 - 래퍼 세션 이어쓰기(`-NewSession`, `resumed`·`thread_total`), claude-run `--no-session-persistence` 제거, `batch-run.ps1` + `docs/batch.md`, 토큰 보고서 캐시율·1턴 세션·상태 확인 호출·고정 블록 재전송 수치와 진단 2줄, README 토큰 효율 절
       - 계기: 역식 프로젝트(manga-trans) 사용량 감사 689건 - 하네스 310호출이 전부 새 세션(`--ephemeral` + 호출별 임시 `-C`)이라 46k 고정 블록을 매번 재전송(캐시 2.5%), 메인은 28초마다 264회 상태 확인. 사용자 결정: 역식만 고치지 않고 TANDEM에 일반화
       - Codex 카드 C22-C25 (`.work/v1.5/`). C22·C24의 실호출 시험은 임시 폴더 신뢰 문제로 Codex가 못 해서 내가 git 저장소 임시 설치본에서 직접 실행. 역식 쪽은 별도 카드 `D:/dev/manga-trans/docs/tandem/tasks/MT-902.md` (Python 어댑터에 같은 규칙 구현 + `wait_run.py` 블로킹 대기)
+      - 배포 검증: 원격 VERSION 1.5, 실제 URL 설치(codex-main, ko) 성공 - batch-run.ps1·docs/batch.md 배치, claude-run에 resume. 태그 `v1.5` + GitHub Releases. 내가 고친 것: batch-run의 `--image` 뒤에 `resume`이 오면 이미지 경로로 먹히는 버그(MT-902 보고서에서 발견) → 이미지 인자를 앞으로 이동, 메시지 ko/en 분리 + BOM
+      - 역식(manga-trans) MT-902 완료: 하네스 테스트 97개 통과, 실제 2쪽 호출 이어쓰기 캐시 93.6%, `wait_run.py`. **커밋은 안 했다** (그 저장소는 커밋 위임 없음, `harness/` 폴더 자체가 미추적 상태). TANDEM 설치본은 v1.2.1 그대로 - 업그레이드 여부는 사용자 결정
 - [ ] **보류** 플러그인 방식 배포 (Claude `/plugin`, Codex `codex plugin`) - 한 줄 설치는 공식 마켓플레이스 심사가 필요해 보류. 계획: `docs/plan-plugin-distribution.md`
 
 ## 지키면 좋을 것
