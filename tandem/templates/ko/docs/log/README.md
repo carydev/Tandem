@@ -5,12 +5,12 @@
 실행 래퍼 codex-run.ps1 또는 claude-run.ps1이 쓴다. 전달책과 총괄은 직접 쓰지 않는다.
 @@endif
 @@if claude-solo codex-solo
-래퍼가 없는 네이티브 하위 호출은 총괄이 호출 1회마다 runs.jsonl에 한 줄 append한다. tokens와 session을 알 수 없으면 null로 기록하고 decided_by를 반드시 기록한다.
+래퍼가 없는 네이티브 하위 호출은 총괄이 호출 1회마다 runs.jsonl에 한 줄 append한다. tokens와 session을 알 수 없으면 null로 기록하고 decided_by를 반드시 기록한다. 가능하면 resumed와 thread_total도 기록한다.
 `escalated_from`과 `reason`은 별도 필드로 기록하고, 없으면 null로 둔다.
 @@endif
 
 예시:
-{"ts":"2026-10-13T09:00:00+09:00","task":"T-12","round":"R1","model":"모델ID","effort":"high","result":"ok","escalated_from":null,"reason":null,"workers":null,"out":"{{DOCS}}/reports/work/T-12_v1.md","session":"세션ID","tokens":{"input":0,"cached":0,"output":0},"decided_by":"table","note":""}
+{"ts":"2026-10-13T09:00:00+09:00","task":"T-12","round":"R1","model":"모델ID","effort":"high","result":"ok","escalated_from":null,"reason":null,"workers":null,"out":"{{DOCS}}/reports/work/T-12_v1.md","session":"세션ID","resumed":false,"tokens":{"input":0,"cached":0,"output":0},"thread_total":{"input":0,"cached":0,"output":0},"decided_by":"table","note":""}
 
 | 필드 | 의미 |
 |---|---|
@@ -23,7 +23,9 @@
 | workers | 하위 일꾼 수, 모르면 null |
 | out | 산출물 경로, 실패면 null |
 | session | CLI 세션 ID, 알 수 없으면 null |
-| tokens | input/cached/output 사용량, 알 수 없으면 null |
+| tokens | 이번 호출의 input/cached/output 사용량, 알 수 없으면 null |
+| resumed | 이전 세션을 이어 썼는지 여부 |
+| thread_total | 세션의 누계 input/cached/output, 알 수 없으면 null |
 | decided_by | jev/table/human |
 | note | 실패 이유 또는 특이사항 |
 

@@ -1,4 +1,4 @@
-﻿param([string]$Task,[ValidateSet('R1','R2','R3','single')][string]$Round='single',[string]$Card,[string]$Out,[string]$Model='haiku',[string]$Effort='low',[ValidateSet('workspace-write','read-only')][string]$Sandbox='workspace-write',[string]$DecidedBy='table',[string]$EscalatedFrom,[string]$Reason,[string]$Prompt,[string]$Wait,[int]$WaitSeconds=540,[string]$RunnerState)
+﻿param([string]$Task,[ValidateSet('R1','R2','R3','single')][string]$Round='single',[string]$Card,[string]$Out,[string]$Model='haiku',[string]$Effort='low',[ValidateSet('workspace-write','read-only')][string]$Sandbox='workspace-write',[string]$DecidedBy='table',[string]$EscalatedFrom,[string]$Reason,[string]$Prompt,[switch]$NewSession,[string]$Wait,[int]$WaitSeconds=540,[string]$RunnerState)
 try { [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false) } catch {}  # UTF-8 stdout: PS 5.1 defaults to the OEM code page (cp949 on Korean Windows), which garbles non-ASCII output read by Bash/Claude
 $ErrorActionPreference='Stop'
 $utf8=[Text.UTF8Encoding]::new($false)
@@ -31,7 +31,7 @@ function Summary($state) {
     $s=Get-Content -LiteralPath $done -Raw -Encoding UTF8 | ConvertFrom-Json
     Write-Output "status=$($s.result) exit=$($s.exit) out=$($s.out_exists)"
     if ($s.summary) { $s.summary -split "`r?`n" | Select-Object -Last 5 | ForEach-Object { Write-Output $_ } }
-    Write-Output "session=$($s.session) tokens=$($s.tokens.input)/$($s.tokens.cached)/$($s.tokens.output)"
+    Write-Output "session=$($s.session) resumed=$($s.resumed.ToString().ToLower()) tokens=$($s.tokens.input)/$($s.tokens.cached)/$($s.tokens.output)"
 }
 function WaitDone([string]$path,[int]$seconds) {
     $until=[datetime]::UtcNow.AddSeconds([Math]::Max(0,[Math]::Min(540,$seconds)))
@@ -44,16 +44,28 @@ try {
     $stateDir=Join-Path $root '.codex-last'
     if ($RunnerState) {
         $s=Get-Content -LiteralPath $RunnerState -Raw -Encoding UTF8 | ConvertFrom-Json
-        $exit=1; $data=$null; $note=''; $tokens=@{input=0;cached=0;output=0}
+        $exit=1; $data=$null; $note=''; $tokens=@{input=0;cached=0;output=0}; $threadTotal=@{input=0;cached=0;output=0}; $resumed=$false
         try {
             $exe=(Get-Command claude.cmd -ErrorAction Stop).Source
             $mode=if ($s.sandbox -eq 'read-only') {'plan'} else {'acceptEdits'}
             $allowed=if ($s.sandbox -eq 'read-only') {'Read,Glob,Grep,Bash(git status:*),Bash(git diff:*)'} else {'Read,Edit,Write,Glob,Grep,Bash(git status:*),Bash(git diff:*)'}
-            $args=@('-p','--model',$s.model,'--effort',$s.effort,'--permission-mode',$mode,'--append-system-prompt-file',(Quote $s.worker),'--output-format','json','--no-session-persistence','--allowedTools',(Quote $allowed)) -join ' '
-            $p=Start-Process -FilePath $exe -ArgumentList $args -WorkingDirectory $root -RedirectStandardInput $s.prompt -RedirectStandardOutput $s.json -RedirectStandardError $s.err -PassThru -Wait -WindowStyle Hidden
-            $exit=$p.ExitCode
-            if (Test-Path -LiteralPath $s.json) { $data=Get-Content -LiteralPath $s.json -Raw -Encoding UTF8 | ConvertFrom-Json }
+            for ($attempt=0; $attempt -lt 2; $attempt++) {
+                $resumed=($attempt -eq 0 -and [bool]$s.resume_session)
+                $data=$null
+                $parts=@('-p','--model',$s.model,'--effort',$s.effort,'--permission-mode',$mode,'--append-system-prompt-file',(Quote $s.worker),'--output-format','json','--allowedTools',(Quote $allowed))
+                if ($resumed) { $parts+=@('--resume',(Quote $s.resume_session)) }
+                $args=$parts -join ' '
+                $p=Start-Process -FilePath $exe -ArgumentList $args -WorkingDirectory $root -RedirectStandardInput $s.prompt -RedirectStandardOutput $s.json -RedirectStandardError $s.err -PassThru -Wait -WindowStyle Hidden
+                $exit=$p.ExitCode
+                if (Test-Path -LiteralPath $s.json) { try { $data=Get-Content -LiteralPath $s.json -Raw -Encoding UTF8 | ConvertFrom-Json } catch {} }
+                if ($resumed -and ($exit -ne 0 -or !$data -or $data.is_error)) { $note='resume_failed -> new session'; continue }
+                break
+            }
             if ($data -and $data.usage) { $tokens=@{input=[long]$data.usage.input_tokens;cached=[long]$data.usage.cache_read_input_tokens;output=[long]$data.usage.output_tokens} }
+            foreach ($key in @('input','cached','output')) {
+                $prior=if ($resumed -and $s.prior_total) {[long]$s.prior_total.$key} else {0}
+                $threadTotal[$key]=$prior+[long]$tokens[$key]
+            }
             if ($s.sandbox -eq 'read-only' -and $exit -eq 0 -and $data -and !$data.is_error) { [IO.File]::WriteAllText($s.out,[string]$data.result,$utf8) }
         } catch { $note=$_.Exception.Message }
         $exists=Test-Path -LiteralPath $s.out -PathType Leaf
@@ -64,10 +76,10 @@ try {
         $summary=if ($stopped) { (@($lines[0]) + @(@($lines | Select-Object -Skip 1) | Select-Object -Last 4)) -join "`n" } else { (@($lines | Select-Object -Last 5)) -join "`n" }
         $session=if ($data) {[string]$data.session_id} else {''}
         if (!$note -and $result -eq 'fail' -and (Test-Path -LiteralPath $s.err)) { $note=([IO.File]::ReadAllText($s.err,[Text.Encoding]::UTF8) -split "`r?`n" | Select-Object -First 2) -join ' ' }
-        $record=@{ts=[datetime]::Now.ToString('o');task=$s.task;round=$s.round;model=$s.model;effort=$s.effort;result=$result;escalated_from=$(if ($s.escalated_from) {$s.escalated_from} else {$null});reason=$(if ($s.reason) {$s.reason} else {$null});workers=$null;out=(Relative $s.out $root);session=$session;tokens=$tokens;decided_by=$s.decided_by;note=$note;cost=$(if ($data) {$data.total_cost_usd} else {$null})}
+        $record=@{ts=[datetime]::Now.ToString('o');task=$s.task;round=$s.round;model=$s.model;effort=$s.effort;result=$result;escalated_from=$(if ($s.escalated_from) {$s.escalated_from} else {$null});reason=$(if ($s.reason) {$s.reason} else {$null});workers=$null;out=(Relative $s.out $root);session=$session;resumed=$resumed;tokens=$tokens;thread_total=$threadTotal;decided_by=$s.decided_by;note=$note;cost=$(if ($data) {$data.total_cost_usd} else {$null})}
         $log=Join-Path $s.docs 'log/runs.jsonl'; [IO.Directory]::CreateDirectory((Split-Path $log)) | Out-Null
         [IO.File]::AppendAllText($log,($record | ConvertTo-Json -Compress -Depth 8)+"`n",$utf8)
-        $done=@{result=$result;exit=$exit;out_exists=$exists;summary=$summary;session=$session;tokens=$tokens}
+        $done=@{result=$result;exit=$exit;out_exists=$exists;summary=$summary;session=$session;resumed=$resumed;tokens=$tokens}
         [IO.File]::WriteAllText($RunnerState+'.done.json',($done | ConvertTo-Json -Compress -Depth 8),$utf8)
         exit 0
     }
@@ -107,7 +119,15 @@ try {
         $stem=Join-Path $stateDir $id; $statePath=$stem+'.state.json'
         [IO.File]::WriteAllText($stem+'.prompt',$instruction,$utf8)
         $worker=Join-Path (Join-Path $root $config.docs_root) 'claude-worker.md'
-        $s=@{id=$id;key=$safe;task=$Task;round=$Round;model=$Model;effort=$Effort;sandbox=$Sandbox;decided_by=$DecidedBy;escalated_from=$EscalatedFrom;reason=$Reason;out=$outFull;docs=(Join-Path $root $config.docs_root);worker=$worker;prompt=$stem+'.prompt';json=$stem+'.json';err=$stem+'.err'}
+        $docs=Join-Path $root $config.docs_root
+        $resumeSession=''; $priorTotal=$null
+        $log=Join-Path $docs 'log/runs.jsonl'
+        if (!$NewSession -and $Round -ne 'R2' -and !$EscalatedFrom -and (Test-Path -LiteralPath $log)) {
+            foreach ($line in [IO.File]::ReadLines($log)) {
+                try { $entry=$line | ConvertFrom-Json; if ($entry.task -ceq $Task -and $entry.model -ieq $Model -and $entry.session) { $resumeSession=[string]$entry.session; $priorTotal=if ($entry.thread_total) {$entry.thread_total} else {$entry.tokens} } } catch {}
+            }
+        }
+        $s=@{id=$id;key=$safe;task=$Task;round=$Round;model=$Model;effort=$Effort;sandbox=$Sandbox;decided_by=$DecidedBy;escalated_from=$EscalatedFrom;reason=$Reason;out=$outFull;docs=$docs;worker=$worker;prompt=$stem+'.prompt';json=$stem+'.json';err=$stem+'.err';resume_session=$resumeSession;prior_total=$priorTotal}
         [IO.File]::WriteAllText($statePath,($s | ConvertTo-Json -Compress),$utf8)
         $runner=Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Quote $PSCommandPath),'-RunnerState',(Quote $statePath)) -WorkingDirectory $root -PassThru -WindowStyle Hidden
     } finally { $mutex.ReleaseMutex(); $mutex.Dispose() }

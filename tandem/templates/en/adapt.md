@@ -48,6 +48,7 @@ If `jev.enabled` is false in tandem/config.json, skip all Jev checks, do not cal
 Otherwise, only when a key exists, smoke-test tandem/tools/jev.ps1 -Route -Card <safe test card>.
 If there is no key, check that routing falls back to the assignment table. Jev does not replace final judgment or G1/G2.
 Run tandem/tools/token-report.ps1 -Days 7 and check the paths of the summary and detailed reports.
+Record its cache rate and single-turn session ratio in {{DOCS}}/harness-status.md. If the project has its own repeated-item loop, add whether to apply the rules in {{DOCS}}/batch.md to Decisions needed.
 
 ## 5. Safe smoke test
 Use a small card that does not decide project content to check subagent invocation, result files, five-line summaries, and session/tokens/decided_by in execution logs.

@@ -48,6 +48,7 @@ tandem/config.json에서 `jev.enabled`가 false면 Jev 점검을 모두 건너�
 그 외에 키가 있을 때만 tandem/tools/jev.ps1 -Route -Card <안전한 시험 카드>를 스모크 테스트한다.
 키가 없으면 배치표로 돌아가는지 확인한다. Jev는 최종 판정과 G1/G2를 대신하지 않는다.
 tandem/tools/token-report.ps1 -Days 7 실행과 요약·상세 보고서 경로를 확인한다.
+보고서의 캐시율과 1턴 세션 비율을 {{DOCS}}/harness-status.md에 적는다. 프로젝트에 자체 반복 항목 루프가 있으면 {{DOCS}}/batch.md 규칙 적용 여부를 '결정할 것'에 올린다.
 
 ## 5. 안전한 스모크 테스트
 프로젝트 내용을 결정하지 않는 작은 카드로 하위 호출, 결과 파일, 5줄 요약, 실행 로그의 session/tokens/decided_by를 확인한다.

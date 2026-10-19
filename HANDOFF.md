@@ -11,7 +11,7 @@
 - 저장소: `https://github.com/carydev/Tandem`
 - 소유자: carydev
 - 라이선스: MIT
-- 버전: v1.4 (`VERSION` 파일이 기준. 업데이트 알림이 이 파일을 본다)
+- 버전: v1.5 (`VERSION` 파일이 기준. 업데이트 알림이 이 파일을 본다)
 
 **이 저장소 자체에는 TANDEM이 설치돼 있지 않다.** 여기는 남에게 나눠 줄 템플릿을 담는 곳이다.
 `.gitignore`가 설치 결과물(`docs/tandem/`, `tandem/config.json`, `tandem/manifest.json`)을 막고 있다. 이건 의도된 것이다.
@@ -27,7 +27,7 @@ tandem/
   files.json                 파일 계약: 무엇을 어느 모드에 어디로 놓는가
   templates/ko/, en/         언어별 템플릿 (상대 경로 구조 동일)
     claude/ codex/ docs/ blocks/ settings.json adapt.md
-  tools/*.ps1                설치 대상에 그대로 복사되는 도구 (check, token-report, jev, manifest, diff, codex-run, claude-run)
+  tools/*.ps1                설치 대상에 그대로 복사되는 도구 (check, token-report, jev, manifest, diff, batch-run, codex-run, claude-run)
 docs/plan-plugin-distribution.md  보류된 플러그인 배포 계획
 docs/design-v1.1.md          v1.1 설계서 (모드, 렌더링, 지문 업데이트, 훅, Jev, 리포트, 래퍼)
 README.md / README.ko.md     사용자 문서 (영어 기본 / 한국어). 함께 고친다
@@ -67,6 +67,11 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 | 팀장(tandem-manager)만 예외: 기본 = 총괄 바로 아래 단계(`claude_manager`, 단계표 fable→opus→sonnet→haiku). 사용자 지정·총괄 판단으로만 최상위 | 사용자 결정(2026-10-19): 팀장은 판단 역할. 총괄이 fable이면 opus, opus면 sonnet |
 | R2 적대 검토는 mid 단계 별도 세션(읽기 전용, 가능하면 다른 모델). 되돌리기 어려운 결정 검수만 총괄 승인으로 최상위 | 사용자 결정(2026-10-19). reviewer.toml·profiles.critic은 MID. claude-main의 .codex/config.toml 기본 model도 MID |
 | Jev `-Route`는 `top`을 고르지 않음 (기본 Tiers mid,light; top만 넘기면 `invalid_tiers`로 배치표) | 승급은 총괄만 결정. `-Escalate`는 참고용 |
+| **같은 과제·같은 모델의 후속 호출은 래퍼가 이전 세션을 이어 씀** (`codex exec … resume <thread> -`, Claude `--resume`). R2·승급(`-EscalatedFrom`)·`-NewSession`은 새 세션. runs.jsonl `resumed`·`thread_total` | 실측(2026-10-19): 새 세션은 폴더가 다르면 캐시 0, 같아도 20k 중 7k. resume 후속 턴은 99% 캐시. 실사용 감사에서 세션당 1호출 310건·캐시율 2.5% |
+| Codex `turn.completed.usage`는 스레드 누계라 래퍼·batch-run이 이전 누계를 빼서 기록 | 실측 20272 → 40562 → 60882. 안 빼면 이어쓴 호출의 토큰이 중복 집계된다 |
+| `--ephemeral` 금지, `-C`는 프로젝트 루트 고정 | ephemeral 스레드는 resume 불가(`no rollout found`). 폴더가 바뀌면 캐시 0 |
+| 반복 항목 작업은 `batch-run.ps1` (묶음당 세션 하나, 고정 블록은 첫 턴에만, 세션 교체 상한, `-OnlyChanged`, 연속 3건 실패 중단, 항목별 증분 usage.jsonl + runs.jsonl 1줄) + `docs/batch.md` 규칙 6개 | 사용자 결정(2026-10-19): 역식 프로젝트만 고치지 않고 모든 프로젝트에 같이 적용되게. 자체 루프(Python)가 있는 프로젝트는 같은 규칙을 어댑터에 구현 |
+| 토큰 보고서가 낭비 패턴 3종을 수치로 (캐시율, 1턴 세션 비율, 상태 확인 호출 수, 비캐시 20k 이상 1턴 세션) + 진단 2줄만 | 문서 규칙은 안 지켜진다(역식 AGENTS.md에 '기다린다'가 있었지만 28초마다 264회 폴링). 수치가 있어야 잡힌다 |
 
 ## 검증된 것 (v1.1, 2026-10-13, Windows PowerShell 5.1.19041)
 
@@ -97,6 +102,14 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - `jev.ps1 -Route -DryRun`: criteria mid·light만, `-Tiers top` → `invalid_tiers` (C20). `token-report.ps1`: 가짜 runs.jsonl 5건 → '사유 없는 실행 2' (C20)
 - lang-check 2회 통과(Jev no_key 항목만 알려진 전제 문제로 실패, C21). 이번에도 실제 Jev 호출이 2회 나갔다
 
+## 검증된 것 (v1.5, 2026-10-19)
+
+- Codex 캐시 실측 (gpt-5.6-luna, 20k 프롬프트, 8회): 새 세션·다른 `-C` → cached 0; 같은 `-C`·같은 프롬프트 → 7168; 이미지가 바뀌면 3584; `exec resume` 2·3턴 → 턴 입력의 99%; `--ephemeral` resume 불가; usage 누계
+- 실제 Codex로 래퍼 이어쓰기 (임시 git 설치본, claude-main en): 2번째 호출 `resumed=true`, cached 35200/38248 (92%), `thread_total` 누계 171k. 첫 호출은 임시 폴더에서 Codex 샌드박스 쓰기가 'environment setup error'로 실패해 `STOPPED:` → `result=stopped`로 올라옴 (v1.3 경로 확인)
+- 실제 Codex로 batch-run (고정 블록 약 14k, 항목 3개): a2·a3 `resumed=true`, cached 14464/14732 (98%), 세션 1개, 캐시율 65.8%, runs.jsonl 1줄
+- 가짜 CLI: resume 옵션 위치, R2·승급·`-NewSession`은 새 세션, `no rollout found` → 새 세션 재시도, 증분 계산, 세션 교체(7항목/3) → 3세션, `-OnlyChanged` 전부 skipped, 연속 3건 실패 → `STOPPED:`, 최상위 게이트, DryRun (C22·C24)
+- 토큰 보고서: 가짜 Claude 30건·Codex 12세션 → 캐시율, 1턴 10/12, 상태 확인 25, 비캐시 20k 이상 10(중앙값 45k), 진단 2줄, `timestamp` 없으면 `n/a` (C23). 이 저장소 실제 실행 OK
+
 ## 검증 안 된 것 (남은 일)
 
 - **Codex 훅**: `.codex/hooks.json`은 프로젝트 신뢰 + `/hooks` 승인 후에만 돈다. 실제 Codex 세션에서 알림 표시 미확인
@@ -105,6 +118,10 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - `/tandem` 적응 전 과정을 실제 프로젝트에서 4개 모드로 돌려보기
 - 총괄이 Agent 호출 때 `model`을 지정해 팀장을 최상위로 올리는 동작 (문서로만 정의, 실제 세션 미확인)
 - 실제 운영에서 승급 조건(mid 1회 실패 + 능력 부족 판정)이 너무 엄격한지 - runs.jsonl의 `escalated_from`·`reason`으로 추적
+- **Codex가 프로젝트 `.codex/config.toml`의 `profiles`·`multi_agent_v2` 키를 무시한다** (2026-10-19, Codex가 `Ignored unsupported project-local config keys: profiles` 경고). 래퍼는 `-m`/`-c`를 직접 넘기므로 영향 없지만 codex-solo의 프로필 기반 설명은 실제로 적용되지 않는다. 템플릿에서 profiles를 빼거나 문서를 고쳐야 함
+- `%TEMP%` 아래 임시 폴더에서 Codex `--sandbox workspace-write` 쓰기가 'environment setup error'로 실패 (실제 프로젝트 폴더에서는 미재현). 임시 설치본 실호출 시험은 read-only 또는 batch-run으로
+- claude-run `--resume` 실호출 (가짜 CLI만 확인). Claude 세션 디렉터리가 바뀌면 resume 실패 → 새 세션 재시도 경로만 가짜로 확인
+- 긴 이어쓰기 스레드의 캐시 읽기 누적 비용 vs 고정 블록 재전송의 손익분기 (추정: 이미지 10k/호출이면 약 10호출, 텍스트만이면 약 25호출). batch-run 기본 30/150k는 텍스트 기준
 
 ## 진행 상황
 
@@ -143,6 +160,9 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - [x] **v1.4** (2026-10-19): 서브 최상위 모델 제한 - 단계표(fable→opus→sonnet→haiku)와 팀장 기본값 `claude_manager`(총괄 바로 아래), 래퍼 게이트 `-EscalatedFrom`/`-Reason`, runs.jsonl `reason` 필드, Jev top 제외, 토큰 보고서 최상위 사용 수치, R2·reviewer·critic mid, claude-main config.toml 기본 mid, `fable` 별칭, 규칙 문서화(model-routing.md '최상위 모델 사용 규칙')
       - Codex 카드 C18-C21 (`.work/v1.4/`). C19가 claude-worker.md(일꾼 시스템 프롬프트)에 래퍼 호출 문장을 넣어서 빼고 delegation.md codex-main 절로 옮김. Codex 실행 중 Claude Code가 메모리 부족으로 배경 셸을 3번 죽였지만 Codex 프로세스는 살아서 완료 (파일 감시로 대기)
       - 배포 검증: 원격 VERSION 1.4, 실제 URL 설치(claude-main, en) 성공 - config에 claude_manager=sonnet, model-routing.md에 Top-model policy, .codex/config.toml 기본 model=MID. 태그 `v1.4` + GitHub Releases 생성
+- [x] **v1.5** (2026-10-19): 토큰 효율 - 래퍼 세션 이어쓰기(`-NewSession`, `resumed`·`thread_total`), claude-run `--no-session-persistence` 제거, `batch-run.ps1` + `docs/batch.md`, 토큰 보고서 캐시율·1턴 세션·상태 확인 호출·고정 블록 재전송 수치와 진단 2줄, README 토큰 효율 절
+      - 계기: 역식 프로젝트(manga-trans) 사용량 감사 689건 - 하네스 310호출이 전부 새 세션(`--ephemeral` + 호출별 임시 `-C`)이라 46k 고정 블록을 매번 재전송(캐시 2.5%), 메인은 28초마다 264회 상태 확인. 사용자 결정: 역식만 고치지 않고 TANDEM에 일반화
+      - Codex 카드 C22-C25 (`.work/v1.5/`). C22·C24의 실호출 시험은 임시 폴더 신뢰 문제로 Codex가 못 해서 내가 git 저장소 임시 설치본에서 직접 실행. 역식 쪽은 별도 카드 `D:/dev/manga-trans/docs/tandem/tasks/MT-902.md` (Python 어댑터에 같은 규칙 구현 + `wait_run.py` 블로킹 대기)
 - [ ] **보류** 플러그인 방식 배포 (Claude `/plugin`, Codex `codex plugin`) - 한 줄 설치는 공식 마켓플레이스 심사가 필요해 보류. 계획: `docs/plan-plugin-distribution.md`
 
 ## 지키면 좋을 것

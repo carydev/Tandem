@@ -5,12 +5,12 @@ Append one JSON object per run to {{DOCS}}/log/runs.jsonl. Do not change or dele
 The codex-run.ps1 or claude-run.ps1 execution wrapper writes it. The dispatcher and lead do not write it directly.
 @@endif
 @@if claude-solo codex-solo
-For native subagent calls without a wrapper, the lead appends one line to runs.jsonl per call. Record tokens and session as null when unknown, and always record decided_by.
+For native subagent calls without a wrapper, the lead appends one line to runs.jsonl per call. Record tokens and session as null when unknown, and always record decided_by. Record resumed and thread_total when available.
 Record `escalated_from` and `reason` separately, using null when absent.
 @@endif
 
 Example:
-{"ts":"2026-10-13T09:00:00+09:00","task":"T-12","round":"R1","model":"model ID","effort":"high","result":"ok","escalated_from":null,"reason":null,"workers":null,"out":"{{DOCS}}/reports/work/T-12_v1.md","session":"session ID","tokens":{"input":0,"cached":0,"output":0},"decided_by":"table","note":""}
+{"ts":"2026-10-13T09:00:00+09:00","task":"T-12","round":"R1","model":"model ID","effort":"high","result":"ok","escalated_from":null,"reason":null,"workers":null,"out":"{{DOCS}}/reports/work/T-12_v1.md","session":"session ID","resumed":false,"tokens":{"input":0,"cached":0,"output":0},"thread_total":{"input":0,"cached":0,"output":0},"decided_by":"table","note":""}
 
 | Field | Meaning |
 |---|---|
@@ -23,7 +23,9 @@ Example:
 | workers | Number of workers, or null if unknown |
 | out | Output path, or null on failure |
 | session | CLI session ID, or null if unknown |
-| tokens | input/cached/output usage, or null if unknown |
+| tokens | input/cached/output usage for this call, or null if unknown |
+| resumed | Whether the prior session was resumed |
+| thread_total | Cumulative input/cached/output for the session, or null if unknown |
 | decided_by | jev/table/human |
 | note | Reason for failure or other noteworthy details |
 

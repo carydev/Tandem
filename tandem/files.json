@@ -19,6 +19,7 @@
     { "src": "codex/hooks.json",                    "dst": ".codex/hooks.json",                    "kind": "codex-hooks", "modes": ["codex-main", "codex-solo"] },
 
     { "src": "docs/lead-charter.md",                "dst": "{{DOCS}}/lead-charter.md",             "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
+    { "src": "docs/batch.md",                       "dst": "{{DOCS}}/batch.md",                    "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "docs/model-routing.md",               "dst": "{{DOCS}}/model-routing.md",            "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "docs/delegation.md",                  "dst": "{{DOCS}}/delegation.md",               "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "docs/operating-model.md",             "dst": "{{DOCS}}/operating-model.md",          "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
@@ -41,6 +42,7 @@
     { "src": "tandem/tools/manifest.ps1",           "dst": "tandem/tools/manifest.ps1",            "kind": "copy", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "tandem/tools/diff.ps1",               "dst": "tandem/tools/diff.ps1",                "kind": "copy", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "tandem/tools/codex-run.ps1",          "dst": "tandem/tools/codex-run.ps1",           "kind": "copy", "modes": ["claude-main", "codex-solo"] },
+    { "src": "tandem/tools/batch-run.ps1",          "dst": "tandem/tools/batch-run.ps1",           "kind": "copy", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "tandem/tools/claude-run.ps1",         "dst": "tandem/tools/claude-run.ps1",          "kind": "copy", "modes": ["codex-main"] }
   ]
 }

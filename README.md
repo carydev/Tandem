@@ -52,6 +52,19 @@ No role below the lead uses the top tier by default. A card can use it only by d
 The lead decides escalation; wrapper calls require `-EscalatedFrom` and `-Reason`. The claude-main manager defaults to the tier directly below the lead and only proposes a move to the top tier.
 R2 reviews use the mid tier in a separate read-only session, with another model when possible.
 
+### Token efficiency
+
+Wrappers resume the session for follow-up calls on the same task; R2 review and escalation start new sessions.
+For repeated items, use `batch-run.ps1`: one session per batch, the fixed block on the first turn only, then only changed item text. See `docs/batch.md`.
+`/tandem-tokens` shows cache rates, single-turn sessions, and status-check calls.
+Measured on 2026-10-19 with Codex CLI, gpt-5.6-luna, and a 20k-token prompt:
+| Call | Cache result |
+|---|---|
+| New session, different work folder | 0 |
+| New session, same folder and prompt | 7k of 20k |
+| `exec resume`, turns 2 and 3 | 99% of turn input |
+| `--ephemeral` | Resume unavailable; Codex usage is cumulative per thread |
+
 ### What you get
 
 | Feature | Purpose |

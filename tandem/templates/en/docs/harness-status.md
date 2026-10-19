@@ -34,3 +34,4 @@ Fill in environment checks with actual execution results during adaptation. Leav
 | Hooks approval | Unable to verify |
 | Jev key and smoke test | Unable to verify |
 | Fast/service_tier | Unable to verify |
+| Cache rate / single-turn session ratio | Unable to verify |

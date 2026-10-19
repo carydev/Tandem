@@ -52,6 +52,19 @@ iwr -useb https://raw.githubusercontent.com/carydev/Tandem/main/boot.ps1 | iex
 승급은 총괄이 결정하며 래퍼 호출에는 `-EscalatedFrom`과 `-Reason`이 필요하다. claude-main 팀장은 총괄 바로 아래 단계를 기본으로 쓰고 최상위는 제안만 한다.
 R2 검토는 mid 단계의 별도 읽기 전용 세션에서 한다(가능하면 다른 모델).
 
+### 토큰 효율
+
+같은 과제의 후속 호출은 래퍼가 세션을 이어 쓴다. R2 검토와 승급은 새 세션에서 한다.
+반복 항목은 `batch-run.ps1`을 쓴다. 묶음당 세션 하나에서 고정 블록은 첫 턴에만 보내고 바뀐 항목만 보낸다. 자세한 규칙은 `docs/batch.md`.
+`/tandem-tokens`는 캐시율, 1턴 세션, 상태 확인 호출 수를 보여 준다.
+실측: 2026-10-19, Codex CLI, gpt-5.6-luna, 20k 토큰 프롬프트.
+| 호출 | 캐시 결과 |
+|---|---|
+| 새 세션·다른 작업 폴더 | 0 |
+| 새 세션·같은 폴더·같은 프롬프트 | 20k 중 7k |
+| `exec resume` 2·3번째 턴 | 턴 입력의 99% |
+| `--ephemeral` | resume 불가; Codex usage는 스레드 누계 |
+
 ### 무엇이 따라오나
 
 | 기능 | 용도 |

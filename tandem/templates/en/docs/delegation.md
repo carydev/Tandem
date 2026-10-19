@@ -2,6 +2,7 @@
 
 Put the goal, background, outputs, write scope, and completion criteria in the task card. Give workers the card path and receive results as files with five-line summaries.
 Finish small tasks in one round. When judgment differs, use an R1 proposal → R2 adversarial review at the mid tier in a separate read-only session (another model when possible) → R3 response. If there is no agreement after three rounds, report the issue as unresolved.
+R3, retries, and reruns after rejection resume the R1 session for caching. R2 and escalations start new sessions.
 Give R2 only the card path (goal and completion criteria), diff file path, and deliverable path. Do not pass R1 dialogue, reasoning, or self-assessment.
 @@if claude-main codex-main
 On an R2 call, the wrapper saves the changes (including new files) with `tandem/tools/diff.ps1` and passes the path.

@@ -2,6 +2,13 @@
 
 **English** | [한국어](CHANGELOG.ko.md)
 
+## v1.5 (2026-10-19)
+
+- Wrappers resume related sessions; `-NewSession` starts a fresh one. `runs.jsonl` records `resumed` and cumulative `thread_total`; `claude-run` no longer uses `--no-session-persistence`.
+- Added `batch-run.ps1` and `docs/batch.md` for repeated items: one session per batch, fixed instructions on the first turn only.
+- The token report now shows cache rates, single-turn Codex sessions, and main status-check calls. Its count of single-turn sessions with at least 20k uncached tokens helps spot repeated fixed blocks; two diagnoses flag one-call sessions and excess status checks.
+- Measured with a 20k-token prompt: a new session in another folder cached 0, a new session in the same folder cached 7k, and resumed turns 2–3 cached 99% of turn input; `--ephemeral` cannot resume.
+
 ## v1.4 (2026-10-19)
 
 - Added tier tables and a manager default one tier below the lead; `claude-main` config.toml now defaults to mid. Added the fable alias.
