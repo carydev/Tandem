@@ -122,6 +122,7 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - `%TEMP%` 아래 임시 폴더에서 Codex `--sandbox workspace-write` 쓰기가 'environment setup error'로 실패 (실제 프로젝트 폴더에서는 미재현). 임시 설치본 실호출 시험은 read-only 또는 batch-run으로
 - claude-run `--resume` 실호출 (가짜 CLI만 확인). Claude 세션 디렉터리가 바뀌면 resume 실패 → 새 세션 재시도 경로만 가짜로 확인
 - 긴 이어쓰기 스레드의 캐시 읽기 누적 비용 vs 고정 블록 재전송의 손익분기 (추정: 이미지 10k/호출이면 약 10호출, 텍스트만이면 약 25호출). batch-run 기본 30/150k는 텍스트 기준
+- **모드 전환 때 옛 모드 전용 파일이 남는다**: 설치기는 manifest 지문이 맞는 파일만 제거한다. 사용자 수정으로 `.new` 를 거쳐 병합된 파일(지문 불일치, manifest 에 없음)은 새 모드에서 빠져도 그대로 남고 경고도 없다 (2026-10-19 manga-trans claude-main→codex-solo 전환: `tandem-manager/dispatch/critic.md`, `tandem-status.md`, `work-lead.toml` 5개를 수동 삭제). 설치기가 "알려진 경로인데 현재 모드에 없음" 을 경고하도록 개선 필요
 
 ## 진행 상황
 
@@ -165,6 +166,7 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
       - Codex 카드 C22-C25 (`.work/v1.5/`). C22·C24의 실호출 시험은 임시 폴더 신뢰 문제로 Codex가 못 해서 내가 git 저장소 임시 설치본에서 직접 실행. 역식 쪽은 별도 카드 `D:/dev/manga-trans/docs/tandem/tasks/MT-902.md` (Python 어댑터에 같은 규칙 구현 + `wait_run.py` 블로킹 대기)
       - 배포 검증: 원격 VERSION 1.5, 실제 URL 설치(codex-main, ko) 성공 - batch-run.ps1·docs/batch.md 배치, claude-run에 resume. 태그 `v1.5` + GitHub Releases. 내가 고친 것: batch-run의 `--image` 뒤에 `resume`이 오면 이미지 경로로 먹히는 버그(MT-902 보고서에서 발견) → 이미지 인자를 앞으로 이동, 메시지 ko/en 분리 + BOM
       - 역식(manga-trans) MT-902 완료: 하네스 테스트 97개 통과, 실제 2쪽 호출 이어쓰기 캐시 93.6%, `wait_run.py`. **커밋은 안 했다** (그 저장소는 커밋 위임 없음, `harness/` 폴더 자체가 미추적 상태). TANDEM 설치본은 v1.2.1 그대로 - 업그레이드 여부는 사용자 결정
+      - 같은 날 manga-trans 설치본을 v1.5 로 올리고(claude-main, `.new` 17개 수동 병합), 이어서 사용자 결정으로 **codex-solo 전환**: 설치기 `-Mode codex-solo` 가 CLAUDE.md 블록·Claude 세션 훅 제거, `.codex/hooks.json` 배치, AGENTS 블록 교체까지 자동. 옛 모드의 사용자 수정 파일 5개는 수동 삭제(위 남은 일). `.new` 9개는 프로젝트 이력 머리말·실측 절을 보존해 병합. 역시 커밋은 안 함
 - [ ] **보류** 플러그인 방식 배포 (Claude `/plugin`, Codex `codex plugin`) - 한 줄 설치는 공식 마켓플레이스 심사가 필요해 보류. 계획: `docs/plan-plugin-distribution.md`
 
 ## 지키면 좋을 것
