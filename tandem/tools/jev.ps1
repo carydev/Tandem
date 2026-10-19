@@ -1,4 +1,4 @@
-﻿param([switch]$Route,[switch]$Escalate,[switch]$NeedCritic,[string]$Card,[string]$FailNote,[string[]]$Tiers=@('top','mid','light'),[string]$Request,[switch]$DryRun,[string]$Endpoint='https://openrouter.ai/api/alpha/decisions')
+﻿param([switch]$Route,[switch]$Escalate,[switch]$NeedCritic,[string]$Card,[string]$FailNote,[string[]]$Tiers=@('mid','light'),[string]$Request,[switch]$DryRun,[string]$Endpoint='https://openrouter.ai/api/alpha/decisions')
 try { [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false) } catch {}  # UTF-8 stdout: PS 5.1 defaults to the OEM code page (cp949 on Korean Windows), which garbles non-ASCII output read by Bash/Claude
 $ErrorActionPreference = 'Stop'
 function Fallback([string]$reason,[string]$notice) {
@@ -44,8 +44,8 @@ try {
     $config = Get-Content (Join-Path $root 'tandem/config.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     $lang = if ($config.lang -eq 'en') { 'en' } else { 'ko' }
     $messages = @{
-        ko = @{ disabled='Jev 사용이 꺼져 있습니다. 배치표로 결정합니다.'; no_key='Jev 키가 없습니다. 배치표로 결정합니다.'; no_sections='카드에 인식할 수 있는 절이 없습니다. 배치표로 결정합니다.'; invalid='Jev 응답을 검증하지 못했습니다. 배치표로 결정합니다.'; low='Jev 확신도가 낮습니다. 배치표로 결정합니다.'; error='Jev 요청에 실패했습니다. 배치표로 결정합니다.'; tier='필요한 능력을 충족하는 가장 낮은 모델 단계를 고르세요'; effort='충분한 추론 강도 중 가장 낮은 단계를 고르세요'; useTier='{0} 모델 사용'; simple='단순함'; moderate='보통'; complex='복잡함'; escalate='이 실패 때문에 단계를 높여야 합니까?'; raise='단계 높이기'; keep='현재 단계 유지'; critic='이 결정은 되돌리기 어렵습니까?'; needCritic='검수 필요'; noCritic='검수 불필요' }
-        en = @{ disabled='Jev is disabled. Using the routing table.'; no_key='Jev key is missing. Using the routing table.'; no_sections='No recognized card sections. Using the routing table.'; invalid='Jev response validation failed. Using the routing table.'; low='Jev confidence is low. Using the routing table.'; error='Jev request failed. Using the routing table.'; tier='Choose the least capable sufficient tier'; effort='Choose the least sufficient effort'; useTier='Use {0} model'; simple='Simple'; moderate='Moderate'; complex='Complex'; escalate='Does the failure require escalation?'; raise='Escalate'; keep='Keep tier'; critic='Is this decision hard to reverse?'; needCritic='Needs critic'; noCritic='No critic' }
+        ko = @{ disabled='Jev 사용이 꺼져 있습니다. 배치표로 결정합니다.'; no_key='Jev 키가 없습니다. 배치표로 결정합니다.'; no_sections='카드에 인식할 수 있는 절이 없습니다. 배치표로 결정합니다.'; invalid='Jev 응답을 검증하지 못했습니다. 배치표로 결정합니다.'; invalid_tiers='선택할 수 있는 모델 단계가 없습니다. 배치표로 결정합니다.'; low='Jev 확신도가 낮습니다. 배치표로 결정합니다.'; error='Jev 요청에 실패했습니다. 배치표로 결정합니다.'; tier='필요한 능력을 충족하는 가장 낮은 모델 단계를 고르세요'; effort='충분한 추론 강도 중 가장 낮은 단계를 고르세요'; useTier='{0} 모델 사용'; simple='단순함'; moderate='보통'; complex='복잡함'; escalate='이 실패 때문에 단계를 높여야 합니까?'; raise='단계 높이기'; keep='현재 단계 유지'; critic='이 결정은 되돌리기 어렵습니까?'; needCritic='검수 필요'; noCritic='검수 불필요' }
+        en = @{ disabled='Jev is disabled. Using the routing table.'; no_key='Jev key is missing. Using the routing table.'; no_sections='No recognized card sections. Using the routing table.'; invalid='Jev response validation failed. Using the routing table.'; invalid_tiers='No model tiers are available. Using the routing table.'; low='Jev confidence is low. Using the routing table.'; error='Jev request failed. Using the routing table.'; tier='Choose the least capable sufficient tier'; effort='Choose the least sufficient effort'; useTier='Use {0} model'; simple='Simple'; moderate='Moderate'; complex='Complex'; escalate='Does the failure require escalation?'; raise='Escalate'; keep='Keep tier'; critic='Is this decision hard to reverse?'; needCritic='Needs critic'; noCritic='No critic' }
     }
     $m = $messages[$lang]
     if ($config.jev.PSObject.Properties['enabled'] -and $config.jev.enabled -eq $false) {
@@ -66,7 +66,8 @@ try {
         if ($state.Count -eq 0) { Fallback 'no_card_sections' $m.no_sections; exit 0 }
         $questions = @{}
         if ($Route) {
-            $criteria = @{}; foreach ($tier in $Tiers) { $criteria[$tier] = $m.useTier.Replace('{0}',$tier) }
+            $criteria = @{}; foreach ($entry in $Tiers) { foreach ($tier in ($entry -split ',')) { $tier=$tier.Trim(); if ($tier -and $tier -ne 'top') { $criteria[$tier] = $m.useTier.Replace('{0}',$tier) } } }
+            if ($criteria.Count -eq 0) { Fallback 'invalid_tiers' $m.invalid_tiers; exit 0 }
             $questions.tier = @{type='choice';instructions=$m.tier;criteria=$criteria}
             $questions.effort = @{type='choice';instructions=$m.effort;criteria=@{low=$m.simple;medium=$m.moderate;high=$m.complex}}
         } elseif ($Escalate) {

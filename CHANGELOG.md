@@ -2,6 +2,12 @@
 
 **English** | [한국어](CHANGELOG.ko.md)
 
+## v1.4 (2026-10-19)
+
+- Added tier tables and a manager default one tier below the lead; `claude-main` config.toml now defaults to mid. Added the fable alias.
+- Gated top-tier wrapper runs with `-EscalatedFrom` and `-Reason`; Jev no longer chooses the top tier. Reports now include top-tier use counts.
+- R2 uses the mid tier in a separate read-only session. Reviewer and critic profiles default to mid.
+
 ## v1.3 - 2026-10-14
 
 ### Added

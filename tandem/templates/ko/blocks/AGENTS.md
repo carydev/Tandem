@@ -7,6 +7,7 @@
 - 출처: github.com/forrestchang/andrej-karpathy-skills의 Karpathy 규칙 정리.
 - 관련 경로와 목차부터 찾고 필요한 본문만 읽는다. 생성물과 대용량 로그는 필요한 경우에만 읽는다.
 - 결과는 파일과 5줄 이내 요약으로 전달한다. 본문을 메인 컨텍스트에 복사하지 않는다.
+- 최상위 모델은 총괄이 승급을 결정했을 때만 쓴다(model-routing.md).
 
 @@if claude-main
 너는 Claude 총괄 아래 Codex 실무팀이다. 카드를 먼저 읽고 지정된 파일만 쓴다.

@@ -31,6 +31,7 @@ Codex top-level lead → workers in .codex/agents. Receive worker results as fil
 - Jev only helps choose the model and effort, escalation, and whether cross-review is needed. It does not make the final decision or bypass G1/G2.
 
 ## Sessions and cost
+- Top-model use follows model-routing.md. Only the lead decides escalation and records the reason.
 - Reuse the cache for the same task, but use a new session or /clear for unrelated tasks. At the end, hand off decisions, changed files, verification, and remaining issues.
 - Do not pass along a long context verbatim. Use the card path and a short summary.
 @@if claude-main codex-main

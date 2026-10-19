@@ -2,7 +2,12 @@
 # Model IDs are replaced with those available to the actual account during the /tandem adaptation step.
 # Check for conflicts with the global ~/.codex/config.toml.
 
+@@if claude-main
+model = "{{MODEL_MID}}"
+@@endif
+@@if codex-main codex-solo
 model = "{{MODEL_TOP}}"
+@@endif
 model_reasoning_effort = "medium"
 web_search = "cached"
 
@@ -29,12 +34,12 @@ sandbox_mode = "workspace-write"
 
 # Adversarial review: read-only, different model
 [profiles.critic]
-model = "{{MODEL_TOP}}"
+model = "{{MODEL_MID}}"
 model_reasoning_effort = "high"
 approval_policy = "never"
 sandbox_mode = "read-only"
 
-# Escalation for difficult tasks. See model-routing.md for the criteria.
+# Escalation only. See model-routing.md for the criteria.
 [profiles.escalate]
 model = "{{MODEL_TOP}}"
 model_reasoning_effort = "xhigh"

@@ -26,11 +26,15 @@ function AddGroup([string]$key,[long]$inTokens,[long]$write,[long]$read,[long]$o
     $g.equivalent += $inTokens + 1.25*$write + 0.1*$read + 5*$output
 }
 function LocalMessage([string]$ko,[string]$en) { if ($lang -eq 'ko') { return $ko }; return $en }
+function TableCell($value) { return ([string]$value).Replace('|','\|').Replace("`r",' ').Replace("`n",' ') }
 try {
     $root=if ($ProjectRoot) {[IO.Path]::GetFullPath($ProjectRoot)} else {[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))}
     $configPath=Join-Path $root 'tandem/config.json'
     $localConfigPath=Join-Path ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))) 'tandem/config.json'
     $config=if (Test-Path $configPath) {Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json} elseif (Test-Path $localConfigPath) {Get-Content $localConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json} else {[pscustomobject]@{docs_root='docs/tandem';lang=$(if ((Get-UICulture).Name -like 'ko*') {'ko'} else {'en'});mode='claude-main'}}
+    $models=$config.models
+    $codexTop=if ($models) {[string]$models.codex_top} else {''}
+    $claudeTop=if ($models) {[string]$models.claude_top} else {''}
     $project=[IO.Path]::GetFullPath($root).TrimEnd('\')
     $docs=Join-Path $root $(if ($DocsRoot) {$DocsRoot} else {$config.docs_root})
     if (!$Out) { $Out=Join-Path $docs ('reports/usage/usage-'+(Get-Date -Format yyyyMMdd)+'.md') }
@@ -38,7 +42,7 @@ try {
     $lang=if ($config.lang -eq 'en') {'en'} else {'ko'}
     $groups=@{}; $mainContexts=[Collections.Generic.List[double]]::new(); $subRequests=[Collections.Generic.List[int]]::new()
     $claudeStarts=[Collections.Generic.List[long]]::new(); $mainRequests=[Collections.Generic.List[int]]::new()
-    $claudeSessions=0; $subCount=0; $nonTandem=[double]0; $allClaude=[double]0
+    $claudeSessions=0; $subCount=0; $topClaudeRequests=0; $nonTandem=[double]0; $allClaude=[double]0
     $encoded=[regex]::Replace($project,'[^A-Za-z0-9]','-')
     $claudeRoot=[IO.Path]::GetFullPath((Join-Path $env:USERPROFILE ('.claude/projects/'+$encoded)))
     if (Test-Path $claudeRoot) {
@@ -62,6 +66,7 @@ try {
                     $read=NumberIn $tail 'cache_read_input_tokens'; $output=NumberIn $tail 'output_tokens'
                     $model=FieldIn $line 'model'; if (!$model) { $model='unknown' }
                     AddGroup "$role|$model" $inTokens $write $read $output
+                    if ($sub -and $role -ne 'main' -and $claudeTop -and $model -eq $claudeTop) { $topClaudeRequests++ }
                     $eq=$inTokens+1.25*$write+0.1*$read+5*$output; $allClaude+=$eq
                     if ($sub -and $role -notmatch '(?i)tandem|general-purpose|explore') { $nonTandem+=$eq }
                     if (!$sub) {
@@ -77,7 +82,7 @@ try {
         }
     }
     $codexRoot=Join-Path $env:USERPROFILE '.codex/sessions'
-    $codexSessions=0; $codexUnreadable=0; $turns=[long]0; $toolBytes=[long]0; $modelDist=@{}; $effortDist=@{}; $topInput=[long]0; $allCodexInput=[long]0
+    $codexSessions=0; $topCodexSessions=0; $codexUnreadable=0; $turns=[long]0; $toolBytes=[long]0; $modelDist=@{}; $effortDist=@{}; $topInput=[long]0; $allCodexInput=[long]0
     $codexStarts=[Collections.Generic.List[long]]::new(); $codexTurnCounts=[Collections.Generic.List[int]]::new()
     if (Test-Path $codexRoot) {
         $dates=0..$Days | ForEach-Object { (Get-Date).AddDays(-$_).ToString('yyyy/MM/dd',[Globalization.CultureInfo]::InvariantCulture) }
@@ -117,11 +122,13 @@ try {
                 finally { if ($reader) { $reader.Dispose() } }
                 if (!$belongs) { continue }
                 $codexSessions++; $turns+=$sessionTurns; $toolBytes+=$sessionBytes; $codexTurnCounts.Add($sessionTurns)
+                $isTopCodex=if ($codexTop) {$model -eq $codexTop} else {$model -match 'astra|top'}
+                if ($isTopCodex) { $topCodexSessions++ }
                 if (!$modelDist.ContainsKey($model)) { $modelDist[$model]=0 }; $modelDist[$model]++
                 if (!$effortDist.ContainsKey($effort)) { $effortDist[$effort]=0 }; $effortDist[$effort]++
                 if ($lastUsage) {
                     $inTokens=NumberIn $lastUsage 'input_tokens'; $cached=NumberIn $lastUsage 'cached_input_tokens'; $output=NumberIn $lastUsage 'output_tokens'
-                    $allCodexInput+=$inTokens; if ($model -match 'astra|top') { $topInput+=$inTokens }
+                    $allCodexInput+=$inTokens; if ($isTopCodex) { $topInput+=$inTokens }
                     $key="codex|$model|$effort"
                     if (!$groups.ContainsKey($key)) { $groups[$key]=@{requests=0;input=[long]0;write=[long]0;read=[long]0;output=[long]0;equivalent=[double]0} }
                     $g=$groups[$key]; $g.requests+=$sessionTurns; $g.input+=$inTokens; $g.read+=$cached; $g.output+=$output
@@ -130,8 +137,15 @@ try {
             }
         }
     }
-    $runPath=Join-Path $docs 'log/runs.jsonl'; if (!(Test-Path $runPath)) { $runPath=Join-Path $docs 'runs.jsonl' }; $runs=0
-    if (Test-Path $runPath) { foreach ($line in [IO.File]::ReadLines($runPath)) { if ($line.Contains('"ts"')) { try { $run=$line | ConvertFrom-Json; if ($run.ts -and [datetime]$run.ts -ge $since) { $runs++ } } catch {} } } }
+    $runPath=Join-Path $docs 'log/runs.jsonl'; if (!(Test-Path $runPath)) { $runPath=Join-Path $docs 'runs.jsonl' }; $runs=0; $runsWithoutReason=0
+    $topRuns=[Collections.Generic.List[object]]::new()
+    if (Test-Path $runPath) { foreach ($line in [IO.File]::ReadLines($runPath)) { if ($line.Contains('"ts"')) { try { $run=$line | ConvertFrom-Json; if ($run.ts -and [datetime]$run.ts -ge $since) {
+        $runs++
+        if (($codexTop -and $run.model -eq $codexTop) -or ($claudeTop -and $run.model -eq $claudeTop)) {
+            $topRuns.Add($run)
+            if (!$run.escalated_from -and $run.decided_by -ne 'human') { $runsWithoutReason++ }
+        }
+    } } catch {} } } }
     $avgContext=if ($mainContexts.Count) { [math]::Round(($mainContexts | Measure-Object -Average).Average) } else { 0 }
     $avgSub=if ($subRequests.Count) { [math]::Round(($subRequests | Measure-Object -Average).Average,1) } else { 0 }
     $avgTurns=if ($codexSessions) { [math]::Round($turns/$codexSessions,1) } else { 0 }
@@ -162,6 +176,7 @@ try {
     $lines.Add((LocalMessage "기간: $Days 일. 환산 토큰은 상대 비교용 추정치입니다." "Period: $Days days. Equivalent tokens are relative comparison estimates."))
     $lines.Add((LocalMessage "Claude 메인 세션: $claudeSessions; 하위 에이전트: $subCount; 메인 요청당 평균 맥락: $avgContext; 하위 호출당 평균 요청: $avgSub" "Claude main sessions: $claudeSessions; subagents: $subCount; average main context/request: $avgContext; average subagent requests/call: $avgSub"))
     $lines.Add((LocalMessage "Codex 세션: $codexSessions; 읽기 실패: $codexUnreadable; 세션당 턴: $avgTurns; 세션당 도구 출력(KB): $avgBytes; runs.jsonl: $runs" "Codex sessions: $codexSessions; unreadable: $codexUnreadable; turns/session: $avgTurns; tool output KB/session: $avgBytes; runs.jsonl: $runs"))
+    $lines.Add((LocalMessage "최상위 모델 서브 사용: Codex 세션 $topCodexSessions, Claude 서브 요청 $topClaudeRequests, 사유 없는 실행 $runsWithoutReason" "Top-model subagent use: Codex sessions $topCodexSessions, Claude subagent requests $topClaudeRequests, runs without reason $runsWithoutReason"))
     $lines.Add((LocalMessage "세션 시작 비용(첫 요청 맥락): Claude 평균 $avgClaudeStart / 최대 $maxClaudeStart, Codex 평균 $avgCodexStart / 최대 $maxCodexStart" "Session start cost (first request context): Claude average $avgClaudeStart / maximum $maxClaudeStart, Codex average $avgCodexStart / maximum $maxCodexStart"))
     $lines.Add((LocalMessage "세션 길이(요청 수): Claude 평균 $avgMainRequests / 최대 $maxMainRequests, Codex 턴 평균 $avgTurns / 최대 $maxCodexTurns" "Session length (requests): Claude average $avgMainRequests / maximum $maxMainRequests, Codex turns average $avgTurns / maximum $maxCodexTurns"))
     $lines.Add((LocalMessage '이어하기·압축된 세션은 시작 비용이 크게 잡힐 수 있습니다.' 'Resumed or compacted sessions may show a high start cost.'))
@@ -169,11 +184,15 @@ try {
     foreach ($key in ($groups.Keys | Sort-Object)) { $g=$groups[$key]; $displayKey=$key.Replace('|',' / '); $lines.Add("| $displayKey | $($g.requests) | $($g.input) | $($g.write) | $($g.read) | $($g.output) | $([math]::Round($g.equivalent)) |") }
     $lines.Add(''); $lines.Add((LocalMessage 'Codex 모델: ' 'Codex models: ')+(($modelDist.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join ', '))
     $lines.Add((LocalMessage 'Codex 추론 강도: ' 'Codex effort: ')+(($effortDist.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join ', '))
+    $lines.Add(''); $lines.Add((LocalMessage '## 최상위 모델 실행' '## Top-model runs'))
+    $lines.Add((LocalMessage '| 작업 | 라운드 | 모델 | 승격 전 모델 | 사유 |' '| Task | Round | Model | Escalated from | Reason |'))
+    $lines.Add('|---|---|---|---|---|')
+    foreach ($run in $topRuns) { $lines.Add('| '+((@($run.task,$run.round,$run.model,$run.escalated_from,$run.reason) | ForEach-Object { TableCell $_ }) -join ' | ')+' |') }
     $lines.Add(''); $lines.Add((LocalMessage '## 진단' '## Diagnosis')); foreach ($item in $diagnosis) { $lines.Add('- '+$item) }
     $dir=Split-Path -Parent $Out; if (!(Test-Path $dir)) { New-Item -ItemType Directory $dir -Force | Out-Null }
     [IO.File]::WriteAllText($Out,($lines -join "`n")+"`n",[Text.UTF8Encoding]::new($false))
     $watch.Stop()
-    $summary=@($lines[0],$lines[2],$lines[3],$lines[4],$lines[5],((LocalMessage '보고서: ' 'Report: ')+$Out),((LocalMessage '소요 시간: {0:n1}초' 'Elapsed: {0:n1}s') -f $watch.Elapsed.TotalSeconds))
+    $summary=@($lines[0],$lines[2],$lines[3],$lines[4],$lines[5],$lines[6],((LocalMessage '보고서: ' 'Report: ')+$Out),((LocalMessage '소요 시간: {0:n1}초' 'Elapsed: {0:n1}s') -f $watch.Elapsed.TotalSeconds))
     $summary+=$diagnosis | Select-Object -First 30
     [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)
     $summary | Select-Object -First 40

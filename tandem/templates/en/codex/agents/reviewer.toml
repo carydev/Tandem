@@ -1,6 +1,6 @@
 name = "reviewer"
 description = "Adversarial review. Find at least three weaknesses. Agreement alone counts as failure."
-model = "{{MODEL_TOP}}"
+model = "{{MODEL_MID}}"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 

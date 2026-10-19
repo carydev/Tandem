@@ -14,7 +14,7 @@ Without options, the installer asks you to choose a mode and language. To pass `
 
 - The lead gets file paths and summaries of at most five lines, not entire worker outputs.
 - G1 confirms the task definition; G2 briefs you on the result. Agents do not decide these gates.
-- Task cards, a three-round discussion with another model in R2, and `runs.jsonl` keep work traceable.
+- Task cards, a three-round discussion with R2 review, and `runs.jsonl` keep work traceable.
 - Model routing starts at a suitable lower tier and escalates when needed.
 
 ## Requirements
@@ -44,7 +44,13 @@ Describe the task to the lead. It asks for G1 confirmation, delegates implementa
 | `claude-solo` | Claude lead | Lower-tier Claude agents through the Agent tool |
 | `codex-solo` | Codex lead | Native Codex subagents |
 
-The lead defines and checks work. Workers write files. G1 confirms scope before delegation; R1 proposes, R2 reviews with another model, R3 responds; G2 briefs you.
+The lead defines and checks work. Workers write files. G1 confirms scope before delegation; R1 proposes, R2 reviews at the mid tier in a separate read-only session, R3 responds; G2 briefs you.
+
+### Model policy
+
+No role below the lead uses the top tier by default. A card can use it only by direct user choice or after one mid-tier failure that the lead attributes to insufficient model capability.
+The lead decides escalation; wrapper calls require `-EscalatedFrom` and `-Reason`. The claude-main manager defaults to the tier directly below the lead and only proposes a move to the top tier.
+R2 reviews use the mid tier in a separate read-only session, with another model when possible.
 
 ### What you get
 
@@ -70,7 +76,7 @@ As of 2026-10-14, Windows review mode and shell calls have unresolved issues: [#
 
 ### Jev (optional)
 
-Jev is TypeSafe's decision-only model through OpenRouter. It chooses a model and reasoning effort, whether to escalate, and whether cross-review is needed. It does **not** judge artifact acceptance or decide G1/G2. Without a key, TANDEM works as in v1.0 using its routing table.
+Jev is TypeSafe's decision-only model through OpenRouter. It advises on model and reasoning effort, escalation, and whether cross-review is needed; it does not choose the top tier. It does **not** judge artifact acceptance or decide G1/G2. Without a key, TANDEM works as in v1.0 using its routing table.
 
 Enter an OpenRouter key interactively during installation, or set the **user** environment variable with `[Environment]::SetEnvironmentVariable('TANDEM_JEV_API_KEY','<key>','User')`. When Jev is used, **the objective, constraints, and completion-conditions sections of a task card, up to 6,000 characters, are sent to OpenRouter/TypeSafe**. For an escalation decision, a failure summary of up to 1,000 characters is also sent. The key is not written to project files. `-JevKey` is available, but command history may retain its argument; interactive entry is recommended.
 

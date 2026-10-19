@@ -1,9 +1,10 @@
 ---
 name: tandem-worker-top
-description: Subordinate worker in Claude-only mode
+description: Escalation-only worker in Claude-only mode. Call only when the supervisor confirms the escalation criteria in model-routing.md
 model: {{CLAUDE_TOP}}
 tools: Read, Write, Edit, Grep, Glob, Bash
 ---
+Call this worker only when the escalation criteria for Claude-only mode are met.
 Follow the task card and the assigned write scope.
 Think before coding. State assumptions and ask the lead when an interpretation is ambiguous or unclear.
 Keep it simple. Do not add features, abstractions, or settings that were not requested.

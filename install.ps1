@@ -137,14 +137,23 @@ if ($existing) { $cfg = $existing } else { $cfg = [pscustomobject]@{} }
 if (-not $cfg.models) { $cfg | Add-Member -NotePropertyName models -NotePropertyValue ([pscustomobject]@{}) -Force }
 $models = $cfg.models
 foreach ($name in @('codex_top','codex_mid','codex_light','claude_lead')) { [void](Prop $models $name '') }
-$legacy = @{ claude_top='claude_manager'; claude_mid='claude_critic'; claude_light='claude_dispatch' }
-$defaults = @{ claude_top='opus'; claude_mid='sonnet'; claude_light='haiku' }
+$claudeLadder = @('fable','opus','sonnet','haiku')
+$legacy = @{ claude_mid='claude_critic'; claude_light='claude_dispatch' }
+$legacyManagerOnly = -not $models.PSObject.Properties['claude_top'] -and $models.PSObject.Properties['claude_manager'] -and $models.claude_manager
+$topDefault = if ($models.claude_lead -and $claudeLadder -contains $models.claude_lead) { $models.claude_lead } else { 'opus' }
+$defaults = @{ claude_top=$topDefault; claude_mid='sonnet'; claude_light='haiku' }
 foreach ($name in @('claude_top','claude_mid','claude_light')) {
   $oldName = $legacy[$name]
-  $value = if ($models.PSObject.Properties[$oldName] -and $models.$oldName) { $models.$oldName } else { $defaults[$name] }
+  $value = if ($name -eq 'claude_top' -and $legacyManagerOnly) { $models.claude_manager }
+    elseif ($oldName -and $models.PSObject.Properties[$oldName] -and $models.$oldName) { $models.$oldName }
+    else { $defaults[$name] }
   [void](Prop $models $name $value)
 }
-foreach ($name in @('claude_manager','claude_dispatch','claude_critic')) {
+if ($legacyManagerOnly) { $models.PSObject.Properties.Remove('claude_manager') }
+$topIndex = [array]::IndexOf($claudeLadder, [string]$models.claude_top)
+$managerDefault = if ($topIndex -ge 0 -and $topIndex -lt ($claudeLadder.Count - 1)) { $claudeLadder[$topIndex + 1] } else { $models.claude_mid }
+[void](Prop $models 'claude_manager' $managerDefault)
+foreach ($name in @('claude_dispatch','claude_critic')) {
   if ($models.PSObject.Properties[$name]) { $models.PSObject.Properties.Remove($name) }
 }
 if (-not $cfg.jev) { $cfg | Add-Member -NotePropertyName jev -NotePropertyValue ([pscustomobject]@{}) -Force }
@@ -213,7 +222,7 @@ $map = @{
   '{{PROJECT}}'=$cfg.project; '{{DOCS}}'=$DocsRoot; '{{VERSION}}'=$version; '{{INSTALLED}}'=$cfg.installed
   '{{MODE}}'=$Mode; '{{LANG}}'=$Lang; '{{LANG_NAME}}'=$langName
   '{{CLAUDE_TOP}}'=$models.claude_top; '{{CLAUDE_MID}}'=$models.claude_mid; '{{CLAUDE_LIGHT}}'=$models.claude_light
-  '{{CLAUDE_MANAGER}}'=$models.claude_top; '{{CLAUDE_DISPATCH}}'=$models.claude_light; '{{CLAUDE_CRITIC}}'=$models.claude_mid
+  '{{CLAUDE_MANAGER}}'=$models.claude_manager; '{{CLAUDE_DISPATCH}}'=$models.claude_light; '{{CLAUDE_CRITIC}}'=$models.claude_mid
 }
 foreach ($tier in @('TOP','MID','LIGHT')) {
   $name = "codex_$($tier.ToLowerInvariant())"

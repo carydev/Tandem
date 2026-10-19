@@ -1,6 +1,6 @@
 name = "reviewer"
 description = "적대적 검토. 약점을 최소 3개 찾는다. 동의만 하는 답은 실패로 본다."
-model = "{{MODEL_TOP}}"
+model = "{{MODEL_MID}}"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 

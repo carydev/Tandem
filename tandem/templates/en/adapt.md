@@ -20,17 +20,18 @@ Check claude --version, supported claude -p flags, and invocation of claude-run.
 @@endif
 Record the model IDs actually available under models in tandem/config.json, and directly replace unresolved markers in installed files with the same values. Do not enter guessed values.
 Run tandem/tools/manifest.ps1 -Rehash to refresh fingerprints of installed files. On update, the installer renders from config, preserving the values in the next version.
+When recording `claude_lead`, set `claude_top` to that value and default `claude_manager` to the tier directly below it (fable→opus, opus→sonnet). Record a different user choice in config.
 Check whether Fast/service_tier in the global Codex settings is fast or priority, and report the result. Do not change global settings.
 
 ## 3. Check mode-specific connections
 @@if claude-main
-Check recognition of tandem-manager, tandem-dispatch, and tandem-critic, and delegation through codex-run.ps1. Run R2 separately with another model in read-only mode.
+Check recognition of tandem-manager, tandem-dispatch, and tandem-critic, and delegation through codex-run.ps1. Run R2 at the mid tier in a separate read-only session (another model when possible).
 @@endif
 @@if codex-main
 Check that the Codex lead reads lead-charter.md and AGENTS.md. Check the model, flags, artifacts, and logs of claude-run.ps1.
 @@endif
 @@if claude-solo
-Check that tandem-worker-top/mid/light appear in the Agent tool and run with their assigned models.
+Check that tandem-worker-top/mid/light appear in the Agent tool and run with their assigned models. tandem-worker-top is for escalation only.
 @@endif
 @@if codex-solo
 Check recognition of .codex/agents roles, subagent model assignments, and file artifacts. If roles cannot be called by name, inject the TOML instructions.
@@ -50,7 +51,7 @@ Run tandem/tools/token-report.ps1 -Days 7 and check the paths of the summary and
 
 ## 5. Safe smoke test
 Use a small card that does not decide project content to check subagent invocation, result files, five-line summaries, and session/tokens/decided_by in execution logs.
-For modes requiring R2, check a separate session with another model. If failures repeat, stop and report the original output.
+For modes requiring R2, check a separate read-only session at the mid tier. If failures repeat, stop and report the original output.
 
 ## 6. Finish
 Fill in verification results, active roles, confirmed models, and unverified items in {{DOCS}}/harness-status.md.

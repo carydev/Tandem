@@ -2,6 +2,12 @@
 
 [English](CHANGELOG.md) | **한국어**
 
+## v1.4 (2026-10-19)
+
+- 단계표와 총괄 바로 아래 팀장 기본값을 추가했다. `claude-main` config.toml의 기본값은 mid이며 fable 별칭을 추가했다.
+- `-EscalatedFrom`·`-Reason`으로 래퍼의 최상위 실행을 제한하고 Jev의 최상위 선택을 제외했다. 보고서에 최상위 사용 건수를 추가했다.
+- R2는 mid 단계의 별도 읽기 전용 세션에서 실행한다. reviewer/critic 프로필 기본값은 mid다.
+
 ## v1.3 - 2026-10-14
 
 ### 추가

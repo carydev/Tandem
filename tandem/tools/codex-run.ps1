@@ -1,4 +1,4 @@
-﻿param([string]$Task,[ValidateSet('R1','R2','R3','single')][string]$Round='single',[string]$Card,[string]$Out,[string]$Model,[string]$Effort='low',[ValidateSet('workspace-write','read-only')][string]$Sandbox='workspace-write',[string]$DecidedBy='table',[string]$Prompt,[string]$Wait,[int]$WaitSeconds=540,[string]$RunnerState)
+﻿param([string]$Task,[ValidateSet('R1','R2','R3','single')][string]$Round='single',[string]$Card,[string]$Out,[string]$Model,[string]$Effort='low',[ValidateSet('workspace-write','read-only')][string]$Sandbox='workspace-write',[string]$DecidedBy='table',[string]$EscalatedFrom,[string]$Reason,[string]$Prompt,[string]$Wait,[int]$WaitSeconds=540,[string]$RunnerState)
 try { [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false) } catch {}  # UTF-8 stdout: PS 5.1 defaults to the OEM code page (cp949 on Korean Windows), which garbles non-ASCII output read by Bash/Claude
 $ErrorActionPreference='Stop'
 $utf8=[Text.UTF8Encoding]::new($false)
@@ -19,6 +19,8 @@ function Messages([string]$root) {
     $table.en.diff='Changes: '
     $table.ko.noDiff='변경분 없음'
     $table.en.noDiff='Changes unavailable'
+    $table.ko.top='최상위 모델은 -Reason 과 -EscalatedFrom(또는 -DecidedBy human)이 필요합니다'
+    $table.en.top='Top model requires -Reason and -EscalatedFrom (or -DecidedBy human)'
     return $table[$lang]
 }
 function Quote([string]$s) { '"'+$s.Replace('"','\"')+'"' }
@@ -63,7 +65,7 @@ try {
         $result=if ($stopped) {'stopped'} elseif ($exit -eq 0 -and $exists) {'ok'} else {'fail'}
         $summary=if ($stopped) { (@($lines[0]) + @(@($lines | Select-Object -Skip 1) | Select-Object -Last 4)) -join "`n" } else { (@($lines | Select-Object -Last 5)) -join "`n" }
         if (!$note -and $result -eq 'fail' -and (Test-Path -LiteralPath $s.err)) { $note=([IO.File]::ReadAllText($s.err,[Text.Encoding]::UTF8) -split "`r?`n" | Select-Object -First 2) -join ' ' }
-        $record=@{ts=[datetime]::Now.ToString('o');task=$s.task;round=$s.round;model=$s.model;effort=$s.effort;result=$result;escalated_from=$null;workers=$null;out=(Relative $s.out $root);session=$session;tokens=$tokens;decided_by=$s.decided_by;note=$note}
+        $record=@{ts=[datetime]::Now.ToString('o');task=$s.task;round=$s.round;model=$s.model;effort=$s.effort;result=$result;escalated_from=$(if ($s.escalated_from) {$s.escalated_from} else {$null});reason=$(if ($s.reason) {$s.reason} else {$null});workers=$null;out=(Relative $s.out $root);session=$session;tokens=$tokens;decided_by=$s.decided_by;note=$note}
         $log=Join-Path $s.docs 'log/runs.jsonl'; [IO.Directory]::CreateDirectory((Split-Path $log)) | Out-Null
         [IO.File]::AppendAllText($log,($record | ConvertTo-Json -Compress -Depth 8)+"`n",$utf8)
         $done=@{result=$result;exit=$exit;out_exists=$exists;summary=$summary;session=$session;tokens=$tokens}
@@ -75,6 +77,10 @@ try {
     if ($Model -cnotmatch '^[A-Za-z0-9._:/-]+$') { Write-Output "status=fail $($m.model)"; exit 0 }
     if ($Effort -cnotmatch '^[a-z]+$') { Write-Output "status=fail $($m.effort)"; exit 0 }
     if (@($root,$Card,$Out) | Where-Object { $_.Contains('"') }) { Write-Output "status=fail $($m.path)"; exit 0 }
+    $config=Get-Content (Join-Path $root 'tandem/config.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($config.models.codex_top -and $Model -ieq $config.models.codex_top) {
+        if ($Reason -cnotmatch '^[^\r\n"]{1,200}$' -or (($EscalatedFrom -cnotmatch '^[A-Za-z0-9._:/-]+$') -and $DecidedBy -cne 'human')) { Write-Output "status=fail $($m.top)"; exit 0 }
+    }
     [IO.Directory]::CreateDirectory($stateDir) | Out-Null
     $safe=(($Task+'-'+$Round) -replace '[^A-Za-z0-9_-]','_')
     $mutex=[Threading.Mutex]::new($false,'Local\Tandem-codex-'+[Convert]::ToBase64String([Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($root+'|'+$safe))).Substring(0,32).Replace('/','_'))
@@ -88,6 +94,7 @@ try {
         $cardText=Get-Content -LiteralPath $cardFull -Raw -Encoding UTF8
         $scope=([regex]::Match($cardText,'(?ms)^##\s*(쓰기 범위|Write scope)[^\r\n]*\r?\n(.*?)(?=^##\s|\z)')).Groups[2].Value.Trim()
         $instruction=$m.instruction.Replace('{0}',$cardFull).Replace('{1}',$outFull).Replace('{2}',$scope).Replace('{3}',[string]$Prompt).Replace('{4}',$cardText).Replace('`n',"`n")
+        if ($EscalatedFrom) { $instruction+="`n"+$(if ($config.lang -eq 'ko') {"승급: $EscalatedFrom -> $Model. 이유: $Reason"} else {"Escalated: $EscalatedFrom -> $Model. Reason: $Reason"}) }
         if ($Round -eq 'R2') {
             $diffPath=''
             try {
@@ -100,8 +107,7 @@ try {
         if ($Sandbox -eq 'read-only') { $instruction+=$m.readonly } else { $instruction+=$m.writable }
         $stem=Join-Path $stateDir $id; $statePath=$stem+'.state.json'
         [IO.File]::WriteAllText($stem+'.prompt',$instruction,$utf8)
-        $config=Get-Content (Join-Path $root 'tandem/config.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-        $s=@{id=$id;key=$safe;task=$Task;round=$Round;model=$Model;effort=$Effort;sandbox=$Sandbox;decided_by=$DecidedBy;out=$outFull;docs=(Join-Path $root $config.docs_root);prompt=$stem+'.prompt';last=$stem+'.txt';jsonl=$stem+'.jsonl';err=$stem+'.err'}
+        $s=@{id=$id;key=$safe;task=$Task;round=$Round;model=$Model;effort=$Effort;sandbox=$Sandbox;decided_by=$DecidedBy;escalated_from=$EscalatedFrom;reason=$Reason;out=$outFull;docs=(Join-Path $root $config.docs_root);prompt=$stem+'.prompt';last=$stem+'.txt';jsonl=$stem+'.jsonl';err=$stem+'.err'}
         [IO.File]::WriteAllText($statePath,($s | ConvertTo-Json -Compress),$utf8)
         $runner=Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Quote $PSCommandPath),'-RunnerState',(Quote $statePath)) -WorkingDirectory $root -PassThru -WindowStyle Hidden
     } finally { $mutex.ReleaseMutex(); $mutex.Dispose() }

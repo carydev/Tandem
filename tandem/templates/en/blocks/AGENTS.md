@@ -7,6 +7,7 @@
 - Source: Karpathy rules compiled at github.com/forrestchang/andrej-karpathy-skills.
 - Find relevant paths and tables of contents first, then read only the needed sections. Read generated files and large logs only when needed.
 - Deliver results in files and a summary of five lines or fewer. Do not copy the full content into the main context.
+- Use the top model only when the lead decides to escalate (model-routing.md).
 
 @@if claude-main
 You are the Codex execution team under the Claude lead. Read the card first and write only the assigned files.

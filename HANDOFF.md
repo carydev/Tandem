@@ -11,7 +11,7 @@
 - 저장소: `https://github.com/carydev/Tandem`
 - 소유자: carydev
 - 라이선스: MIT
-- 버전: v1.3 (`VERSION` 파일이 기준. 업데이트 알림이 이 파일을 본다)
+- 버전: v1.4 (`VERSION` 파일이 기준. 업데이트 알림이 이 파일을 본다)
 
 **이 저장소 자체에는 TANDEM이 설치돼 있지 않다.** 여기는 남에게 나눠 줄 템플릿을 담는 곳이다.
 `.gitignore`가 설치 결과물(`docs/tandem/`, `tandem/config.json`, `tandem/manifest.json`)을 막고 있다. 이건 의도된 것이다.
@@ -62,6 +62,11 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 | 규칙 4 멈춤은 요약 첫 줄 `STOPPED:`, 래퍼가 `stopped`로 기록 | 래퍼는 산출물만 있으면 ok, 요약은 마지막 5줄이라 멈춤이 위로 안 올라갔다 |
 | R2 검토 입력은 카드 + 변경분 파일(`diff.ps1`, 새 파일 포함, 인덱스 무변경) + 산출물 경로만. 래퍼 모드는 R2에서 자동 첨부 | 과정 모르는 검토가 결함을 더 찾는다는 실사용 보고. 읽기 전용 검토자가 셸을 못 쓰는 환경 대비해 diff는 파일로 |
 | 래퍼 `-Model`/`-Effort` 정규식 검증 (try 안, `status=fail`) | `codex.cmd`/`claude.cmd`는 cmd.exe를 거쳐 `&` 등으로 명령 주입 가능. ValidateSet은 try 밖 오류라 전달책이 못 읽음 |
+| **서브는 최상위 모델을 기본으로 못 쓴다** (`claude_top`/`codex_top`). 허용은 사용자 직접 지정(`decided_by=human`) 또는 mid 1회 실패 + 총괄이 '모델 능력 부족'으로 판정. 카드당 승급 1회 | 사용자 결정(2026-10-19): 서브가 최상위를 써서 토큰이 필요 이상으로 든다. 스펙 모호·환경·범위 문제는 승급이 아니라 카드 수정 |
+| 래퍼는 최상위 모델이면 `-Reason`(1-200자, 큰따옴표·줄바꿈 금지) + `-EscalatedFrom`(또는 `-DecidedBy human`) 없이 `status=fail`. runs.jsonl에 `escalated_from`·`reason` 기록 | 문서 규칙만으로는 안 지켜진다. 래퍼가 강제해야 수치로 확인 가능 |
+| 팀장(tandem-manager)만 예외: 기본 = 총괄 바로 아래 단계(`claude_manager`, 단계표 fable→opus→sonnet→haiku). 사용자 지정·총괄 판단으로만 최상위 | 사용자 결정(2026-10-19): 팀장은 판단 역할. 총괄이 fable이면 opus, opus면 sonnet |
+| R2 적대 검토는 mid 단계 별도 세션(읽기 전용, 가능하면 다른 모델). 되돌리기 어려운 결정 검수만 총괄 승인으로 최상위 | 사용자 결정(2026-10-19). reviewer.toml·profiles.critic은 MID. claude-main의 .codex/config.toml 기본 model도 MID |
+| Jev `-Route`는 `top`을 고르지 않음 (기본 Tiers mid,light; top만 넘기면 `invalid_tiers`로 배치표) | 승급은 총괄만 결정. `-Escalate`는 참고용 |
 
 ## 검증된 것 (v1.1, 2026-10-13, Windows PowerShell 5.1.19041)
 
@@ -82,12 +87,24 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - **Jev 실제 호출 성공** (2026-10-14, 사용자 승인): C14 카드로 `-Route` → effort low(0.85), tier mid(0.37 < 0.6) → `low_confidence`로 배치표 대체. 1회 약 $0.00002
 - 주의: 사용자 환경변수에 키가 생긴 뒤로 **lang-check를 돌릴 때마다 실제 Jev 호출이 1회 나간다**(빈 요청 `{}` → `reason=error`, 검사 전제가 키 없음이라 그 항목은 실패). 제품 결함 아님
 
+## 검증된 것 (v1.4, 2026-10-19)
+
+- Claude Code 2.1.303에서 `--model fable` 별칭 동작 확인 (실호출 1회, 약 $0.33 - 기본 시스템 프롬프트 맥락 비용)
+- 4모드×2언어 설치: 자리표시자·`@@` 잔존 0, en 한글 0. 기본 설치 `claude_top=opus`, `claude_manager=sonnet`; config에 `claude_lead=fable`을 미리 넣으면 `claude_top=fable`, `claude_manager=opus`, tandem-manager.md model=opus (C18 + 수동)
+- v1.3 설치본 재설치: `claude_manager=sonnet` 추가, `.new` 0개. v1.0식 키(claude_manager만) 이관 확인 (C18)
+- claude-main 설치본 `.codex/config.toml` 최상위 `model = MID`, codex-main/solo는 TOP (수동)
+- 래퍼 게이트 (가짜 `codex.cmd`/`claude.cmd`, C19 + 수동): 최상위 사유 없음·201자·큰따옴표 → `status=fail`, 상태 파일·runs.jsonl 미생성. `-EscalatedFrom`+`-Reason` 또는 `-DecidedBy human -Reason` → 실행, runs.jsonl에 두 필드, 프롬프트에 승급 줄. `fable` 허용, `gpt-5` 거부. C15 주입 차단·C16 STOPPED·C17 R2 diff 보존
+- `jev.ps1 -Route -DryRun`: criteria mid·light만, `-Tiers top` → `invalid_tiers` (C20). `token-report.ps1`: 가짜 runs.jsonl 5건 → '사유 없는 실행 2' (C20)
+- lang-check 2회 통과(Jev no_key 항목만 알려진 전제 문제로 실패, C21). 이번에도 실제 Jev 호출이 2회 나갔다
+
 ## 검증 안 된 것 (남은 일)
 
 - **Codex 훅**: `.codex/hooks.json`은 프로젝트 신뢰 + `/hooks` 승인 후에만 돈다. 실제 Codex 세션에서 알림 표시 미확인
 - **Claude 훅 알림 표시**: settings 병합까지만 확인. 실제 세션 시작 화면 표시 미확인
 - `codex login` 브라우저 흐름, winget 설치 (v1.0부터 미검증)
 - `/tandem` 적응 전 과정을 실제 프로젝트에서 4개 모드로 돌려보기
+- 총괄이 Agent 호출 때 `model`을 지정해 팀장을 최상위로 올리는 동작 (문서로만 정의, 실제 세션 미확인)
+- 실제 운영에서 승급 조건(mid 1회 실패 + 능력 부족 판정)이 너무 엄격한지 - runs.jsonl의 `escalated_from`·`reason`으로 추적
 
 ## 진행 상황
 
@@ -123,6 +140,8 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - [x] **v1.3** (2026-10-14): 커뮤니티 조사 반영 - 실패 교훈 기록(`STOPPED:` 표식), 토큰 보고서 시작 비용·세션 길이, 과정 모르는 R2 검토, 래퍼 명령 주입 차단, README 공식 Codex 플러그인 안내
       - Codex 카드 C13-C17. 원격에 있던 v1.2.1(PowerShell 도구 UTF-8 콘솔 출력) 위로 rebase. 태그 `v1.3` + GitHub Releases 생성
       - 배포 검증: 원격 VERSION 1.3, 실제 URL 한 줄 설치(codex-main, en) 성공, v1.2 설치본에서 업데이트 알림 "1.2 -> 1.3"
+- [x] **v1.4** (2026-10-19): 서브 최상위 모델 제한 - 단계표(fable→opus→sonnet→haiku)와 팀장 기본값 `claude_manager`(총괄 바로 아래), 래퍼 게이트 `-EscalatedFrom`/`-Reason`, runs.jsonl `reason` 필드, Jev top 제외, 토큰 보고서 최상위 사용 수치, R2·reviewer·critic mid, claude-main config.toml 기본 mid, `fable` 별칭, 규칙 문서화(model-routing.md '최상위 모델 사용 규칙')
+      - Codex 카드 C18-C21 (`.work/v1.4/`). C19가 claude-worker.md(일꾼 시스템 프롬프트)에 래퍼 호출 문장을 넣어서 빼고 delegation.md codex-main 절로 옮김. Codex 실행 중 Claude Code가 메모리 부족으로 배경 셸을 3번 죽였지만 Codex 프로세스는 살아서 완료 (파일 감시로 대기)
 - [ ] **보류** 플러그인 방식 배포 (Claude `/plugin`, Codex `codex plugin`) - 한 줄 설치는 공식 마켓플레이스 심사가 필요해 보류. 계획: `docs/plan-plugin-distribution.md`
 
 ## 지키면 좋을 것
