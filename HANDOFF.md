@@ -121,6 +121,7 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - `lessons.ps1`: 태그 필터, `(xN)` 내림차순·날짜 내림차순, `-Top`, 파일 없으면 무출력
 - `check.ps1`: `TANDEM_HOOK_MAX_CHARS=12` 로 `...` 잘림, `TANDEM_HOOK_OFF=1` 과 `hook.enabled=false` 둘 다 무출력 exit 0
 - 변경한 PowerShell 7개 파서 통과. 래퍼의 R2 자동 review-check 는 실제 Codex/Claude 호출로는 미확인 (아래 남은 일)
+- 배포 검증: 원격 VERSION 1.6, 실제 URL 한 줄 설치(codex-solo, ko) `-Plan` 통과(boot.ps1 스위치 전달 확인) 후 실제 설치 성공 - 도구 9개, config `hook` 기본값. v1.5 설치본(config version 1.5)에서 훅 알림 "1.5 -> 1.6". 태그 `v1.6` + GitHub Releases. manga-trans 설치본은 v1.5 그대로 - 업그레이드는 사용자 결정
 
 ## 검증 안 된 것 (남은 일)
 
