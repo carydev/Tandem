@@ -2,7 +2,7 @@
 
 과제 ID 형식은 프로젝트의 기존 체계를 따른다. 기존 체계가 없으면 적응 단계에서 정한다.
 카드에는 목표, 확정 배경, 쓰기 범위, 산출물 경로, 모델과 강도, 참고 경로, 검증 가능한 완료 조건을 적는다.
-카드 쓰기 전 lessons/README.md에 따라 lessons.md를 관련 태그로 grep하고 맞는 줄만 배경에 붙인다.
+카드 쓰기 전 `tandem/tools/lessons.ps1 -Tags <태그,태그>` 로 교훈을 최대 3줄 뽑아 배경에 붙인다 (lessons/README.md).
 @@if claude-main
 tandem-manager가 쓰고 Codex 리드가 읽는다.
 @@endif

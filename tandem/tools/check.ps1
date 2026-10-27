@@ -1,9 +1,15 @@
 ﻿param([ValidateSet('claude','codex')][string]$Agent='codex')
 try { [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false) } catch {}  # UTF-8 stdout: PS 5.1 defaults to the OEM code page (cp949 on Korean Windows), which garbles non-ASCII output read by Bash/Claude
 $ErrorActionPreference = 'Stop'
+if ($env:TANDEM_HOOK_OFF -eq '1') { exit 0 }  # kill switch: no notices, no network
 try {
     $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
     $config = Get-Content -LiteralPath (Join-Path $root 'tandem/config.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($config.PSObject.Properties['hook'] -and $config.hook.PSObject.Properties['enabled'] -and $config.hook.enabled -eq $false) { exit 0 }
+    $maxChars = 800  # cap on the session-start message; env TANDEM_HOOK_MAX_CHARS overrides config hook.max_chars
+    if ($config.PSObject.Properties['hook'] -and $config.hook.PSObject.Properties['max_chars'] -and [int]$config.hook.max_chars -gt 0) { $maxChars = [int]$config.hook.max_chars }
+    $envMax = 0
+    if ([int]::TryParse([string]$env:TANDEM_HOOK_MAX_CHARS, [ref]$envMax) -and $envMax -gt 0) { $maxChars = $envMax }
     $lang = if ($config.lang -eq 'en') { 'en' } else { 'ko' }
     $messages = @{
         en = @{ update='TANDEM update available'; key='Jev key missing. Set TANDEM_JEV_API_KEY in your user environment.' }
@@ -61,7 +67,9 @@ try {
         } catch {}
     }
     if ($notices.Count) {
-        $json = @{systemMessage=($notices -join ' ')} | ConvertTo-Json -Compress
+        $message = $notices -join ' '
+        if ($message.Length -gt $maxChars) { $message = $message.Substring(0, [Math]::Max(0, $maxChars - 3)) + '...' }
+        $json = @{systemMessage=$message} | ConvertTo-Json -Compress
         $ascii = [regex]::Replace($json,'[^\x00-\x7F]',{param($m) '\u{0:x4}' -f [int][char]$m.Value[0]})
         [Console]::Out.WriteLine($ascii)
     }

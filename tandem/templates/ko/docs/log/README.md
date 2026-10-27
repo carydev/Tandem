@@ -10,7 +10,7 @@
 @@endif
 
 예시:
-{"ts":"2026-10-13T09:00:00+09:00","task":"T-12","round":"R1","model":"모델ID","effort":"high","result":"ok","escalated_from":null,"reason":null,"workers":null,"out":"{{DOCS}}/reports/work/T-12_v1.md","session":"세션ID","resumed":false,"tokens":{"input":0,"cached":0,"output":0},"thread_total":{"input":0,"cached":0,"output":0},"decided_by":"table","note":""}
+{"ts":"2026-10-13T09:00:00+09:00","task":"T-12","round":"R1","model":"모델ID","effort":"high","result":"ok","escalated_from":null,"reason":null,"workers":null,"out":"{{DOCS}}/reports/work/T-12_v1.md","session":"세션ID","resumed":false,"tokens":{"input":0,"cached":0,"output":0},"thread_total":{"input":0,"cached":0,"output":0},"findings":null,"decided_by":"table","note":""}
 
 | 필드 | 의미 |
 |---|---|
@@ -26,6 +26,7 @@
 | tokens | 이번 호출의 input/cached/output 사용량, 알 수 없으면 null |
 | resumed | 이전 세션을 이어 썼는지 여부 |
 | thread_total | 세션의 누계 input/cached/output, 알 수 없으면 null |
+| findings | R2 판정 수 {confirmed, needs_validation, rejected}. R2 가 아니거나 모르면 null |
 | decided_by | jev/table/human |
 | note | 실패 이유 또는 특이사항 |
 

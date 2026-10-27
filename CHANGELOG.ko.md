@@ -2,6 +2,14 @@
 
 [English](CHANGELOG.md) | **한국어**
 
+## v1.6 (2026-10-27)
+
+- R2 검토 판정 스키마: 지적마다 `F1 [confirmed|needs_validation|rejected]` 한 줄. confirmed 는 근거와 심각도 필수, needs_validation 은 심각도 없이 미확인 사실, rejected 는 기각 이유. 새 도구 `review-check.ps1` 이 형식과 R3 응답(`fixed|disputed|deferred`) 누락을 검사하고, 래퍼는 R2 뒤 자동 실행해 요약에 `review=` 줄, `runs.jsonl` 에 `findings` 를 남긴다. 발견자는 검증하지 않는다 (cloudflare/security-audit-skill 의 발견자≠검증자 구조를 가져옴).
+- 설치기 `-Plan` (아무것도 쓰지 않는 미리보기)과 `-Clean` (현재 모드에 없는 TANDEM 파일을 `tandem/.backup/<시각>/` 로 옮긴 뒤 제거). 모드 전환으로 남은 옛 모드 파일과 사용자 수정 파일은 이제 경고로 잡힌다. 이전에는 manifest 지문이 맞는 파일만 지우고 나머지는 말없이 남았다.
+- 실패 교훈에 `(xN)` 횟수. 새 도구 `lessons.ps1 -Tags` 가 횟수 많은 순으로 최대 3줄만 돌려준다. `(x3)` 이상은 기준 문서로 승격. 세션 시작에는 여전히 읽지 않는다.
+- 세션 시작 훅 알림을 800자에서 자른다 (`hook.max_chars`, 환경변수 `TANDEM_HOOK_MAX_CHARS`). `TANDEM_HOOK_OFF=1` 또는 `hook.enabled=false` 면 훅이 아무 것도 하지 않는다.
+- 업그레이드: 설치기를 다시 실행한다. `tandem/tools/review-check.ps1`·`lessons.ps1` 이 추가되고 reviewer·critic·delegation·lessons·tasks·reports·log 문서가 바뀐다. 직접 고친 파일은 `.new` 로 나온다.
+
 ## v1.5 (2026-10-19)
 
 - 래퍼가 같은 과제의 세션을 이어 쓴다. `-NewSession`으로 새 세션을 시작하며 `runs.jsonl`에는 `resumed`와 누계 `thread_total`을 기록한다. `claude-run`에서 `--no-session-persistence`를 제거했다.

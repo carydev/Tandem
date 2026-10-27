@@ -2,6 +2,14 @@
 
 **English** | [한국어](CHANGELOG.ko.md)
 
+## v1.6 (2026-10-27)
+
+- R2 verdict schema: one line per finding, `F1 [confirmed|needs_validation|rejected]`. confirmed requires evidence and severity, needs_validation names the unverified fact without a severity, rejected gives the reason. The new `review-check.ps1` validates the format and missing R3 answers (`fixed|disputed|deferred`); wrappers run it after R2, add a `review=` line to the summary, and record `findings` in `runs.jsonl`. The finder never verifies (finder/verifier separation borrowed from cloudflare/security-audit-skill).
+- Installer `-Plan` (preview that writes nothing) and `-Clean` (moves TANDEM files the current mode does not install to `tandem/.backup/<timestamp>/`, then removes them). Leftovers from a mode switch and user-edited files are now reported; previously only manifest-matching files were removed and the rest stayed silently.
+- Failure lessons carry an `(xN)` count. The new `lessons.ps1 -Tags` returns at most three lines, highest count first. Promote lessons at `(x3)`. Still nothing is loaded at session start.
+- Session-start hook notices are cut at 800 characters (`hook.max_chars`, env `TANDEM_HOOK_MAX_CHARS`). `TANDEM_HOOK_OFF=1` or `hook.enabled=false` makes the hook do nothing.
+- Upgrade: re-run the installer. It adds `tandem/tools/review-check.ps1` and `lessons.ps1` and updates the reviewer, critic, delegation, lessons, tasks, reports, and log docs. Files you edited come out as `.new`.
+
 ## v1.5 (2026-10-19)
 
 - Wrappers resume related sessions; `-NewSession` starts a fresh one. `runs.jsonl` records `resumed` and cumulative `thread_total`; `claude-run` no longer uses `--no-session-persistence`.

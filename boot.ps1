@@ -11,7 +11,9 @@ param(
   [string]$Ref = 'main',
   [switch]$SkipDeps,
   [switch]$Yes,
-  [switch]$Force
+  [switch]$Force,
+  [switch]$Plan,
+  [switch]$Clean
 )
 $ErrorActionPreference = 'Stop'
 $selectedLang = if ($Lang) { $Lang } elseif ((Get-UICulture).Name -like 'ko*') { 'ko' } else { 'en' }
@@ -33,7 +35,7 @@ try {
   $source = Get-ChildItem -Path $tempDir -Directory | Where-Object { Test-Path (Join-Path $_.FullName 'install.ps1') } | Select-Object -First 1
   if (-not $source) { throw $m.missing }
   $arguments = @{}
-  foreach ($name in @('DocsRoot','Mode','Lang','JevKey','NoJev','UseJev','SkipDeps','Yes','Force')) {
+  foreach ($name in @('DocsRoot','Mode','Lang','JevKey','NoJev','UseJev','SkipDeps','Yes','Force','Plan','Clean')) {
     if ($PSBoundParameters.ContainsKey($name)) { $arguments[$name] = $PSBoundParameters[$name] }
   }
   Push-Location $target

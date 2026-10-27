@@ -65,6 +65,12 @@ R2 검토는 mid 단계의 별도 읽기 전용 세션에서 한다(가능하면
 | `exec resume` 2·3번째 턴 | 턴 입력의 99% |
 | `--ephemeral` | resume 불가; Codex usage는 스레드 누계 |
 
+### 검토 판정
+
+R2 검토는 지적마다 `F1 [confirmed|needs_validation|rejected]` 판정 줄을 쓴다. confirmed 는 근거(경로:줄)와 심각도가 필수, needs_validation 은 심각도 없이 미확인 사실만, rejected 는 기각 이유다. confirmed + needs_validation 이 3개 미만이면 동의만 한 것으로 본다.
+`tandem/tools/review-check.ps1` 이 형식과 R3 응답(`F1 fixed|disputed|deferred`) 누락을 검사한다. 래퍼는 R2 뒤 자동으로 돌려 요약에 `review=` 줄을 붙이고 `runs.jsonl` 에 판정 수를 남긴다.
+발견자는 검증하지 않는다. needs_validation 은 총괄이 직접 확인하거나 별도 과제로 확인한 뒤 confirmed 또는 rejected 로 판정한다.
+
 ### 무엇이 따라오나
 
 | 기능 | 용도 |
@@ -73,11 +79,15 @@ R2 검토는 mid 단계의 별도 읽기 전용 세션에서 한다(가능하면
 | 과제 카드와 G1/G2 | 범위를 정의하고 확인·브리핑 결정권을 사용자에게 유지 |
 | 3라운드 토론 | 반론과 미해결 쟁점 기록 |
 | 실행 로그와 토큰 리포트 | 호출을 추적하고 비용이 큰 패턴 발견 |
+| 검토 판정 검사 | R2 판정 형식과 R3 응답 누락을 기계적으로 확인 |
+| 실패 교훈 | 한 줄 교훈에 `(xN)` 횟수, 카드 쓸 때 `lessons.ps1` 로 상위 3줄만 |
 | 운영 문서 | 역할, 소유권, 모델 배치, 현황 관리 |
 
 ### 작업 규칙
 
 모든 역할은 가정을 밝히고, 단순하게 풀고, 과제에 필요한 곳만 고친다. 일꾼은 검증 가능한 완료 조건을 정해 통과할 때까지 반복한다. 같은 실패가 세 번이면 멈추고 막힌 지점을 기록한다. 이 규칙은 [카파시의 관찰을 정리한 커뮤니티 문서](https://github.com/forrestchang/andrej-karpathy-skills)를 의역한 것이며 카파시 본인의 저장소는 아니다.
+
+실패 교훈은 `lessons.md` 한 줄에 `(xN)` 횟수를 붙이고, 카드를 쓸 때 `tandem/tools/lessons.ps1 -Tags <태그>` 로 횟수 많은 순 3줄만 가져온다. 세션 시작에는 읽지 않는다. 세션 시작 알림은 기본 800자로 자르며(`hook.max_chars`, `TANDEM_HOOK_MAX_CHARS`), `TANDEM_HOOK_OFF=1` 또는 `hook.enabled=false` 로 끈다.
 
 실행 래퍼는 반복 폴링 없이 일꾼을 기다리고 호출을 자동 기록한다. 모델을 지정하지 않은 Claude 하위 에이전트는 `CLAUDE_CODE_SUBAGENT_MODEL`로 `sonnet`을 쓴다. 세션 규칙은 같은 과제를 이어서 하고 무관한 과제는 새 세션에서 하도록 한다. 효율 규칙은 필요한 파일과 테스트 출력만 읽도록 한다.
 
@@ -124,6 +134,8 @@ Claude 총괄 세션에서는 `/tandem-tokens`, PowerShell에서는 `tandem/tool
 | `-SkipDeps` | 의존성과 로그인 확인 건너뛰기 |
 | `-Yes` | 질문 없이 기본값 사용 |
 | `-Force` | 재배치 실행; 사용자가 고친 파일은 여전히 `.new`로 보존 |
+| `-Plan` | 미리보기. 배치·교체·제거·잔존 파일 경고만 보여주고 아무것도 쓰지 않는다 (질문 없이 기본값) |
+| `-Clean` | 현재 모드에 없는 TANDEM 파일(옛 모드 잔존·사용자 수정)을 `tandem/.backup/<시각>/`에 옮기고 제거 |
 
 한 줄 설치에 옵션을 주려면 빠른 시작의 `scriptblock` 형식을 쓴다.
 
@@ -134,13 +146,13 @@ Claude 총괄 세션에서는 `/tandem-tokens`, PowerShell에서는 `tandem/tool
 3. 해당하는 `CLAUDE.md`·`AGENTS.md`에 TANDEM 블록을 넣고 설정과 훅을 병합한다.
 4. `tandem/config.json`과 `tandem/manifest.json`을 쓰고 캐시·실행 결과 경로를 `.gitignore`에 추가한다.
 
-업데이트 때 고치지 않은 TANDEM 파일은 자동 교체한다. 사용자가 고친 파일은 그대로 두고 새 버전을 `<파일>.new`에 쓴다. 세션 시작 훅은 새 버전과 Jev 키 누락을 알릴 수 있다. Codex 훅에는 프로젝트 신뢰와 `/hooks` 승인이 필요하다.
+업데이트 때 고치지 않은 TANDEM 파일은 자동 교체한다. 사용자가 고친 파일은 그대로 두고 새 버전을 `<파일>.new`에 쓴다. 현재 모드에 없는 TANDEM 파일(모드 전환으로 남은 옛 파일, 사용자가 고친 파일)은 경고만 하고 두며, `-Clean`을 주면 `tandem/.backup/`에 옮긴 뒤 제거한다. `-Plan`으로 먼저 미리볼 수 있다. 세션 시작 훅은 새 버전과 Jev 키 누락을 알릴 수 있다. Codex 훅에는 프로젝트 신뢰와 `/hooks` 승인이 필요하다.
 
 ### 설치되는 것
 
 | 범위 | 파일 |
 |---|---|
-| 모든 모드 | `docs/tandem/` (`-DocsRoot`로 변경 가능), `tandem/adapt.md`, `tandem/config.json`, `tandem/manifest.json`, `tandem/tools/`의 공통 스크립트 |
+| 모든 모드 | `docs/tandem/` (`-DocsRoot`로 변경 가능), `tandem/adapt.md`, `tandem/config.json`, `tandem/manifest.json`, `tandem/tools/`의 공통 스크립트 (점검, 토큰 리포트, Jev, 지문, 변경분, 검토 판정 검사, 교훈 조회, 배치 실행) |
 | `claude-main` | Claude 팀장·전달책·검수자와 명령, Codex 실무 리드와 에이전트, Claude 설정과 프로젝트 지시 블록 |
 | `codex-main` | Codex 설정과 훅, Claude 일꾼 문서와 설정, `tandem/tools/claude-run.ps1` |
 | `claude-solo` | Claude 총괄·검수자·상중하 일꾼과 명령, Claude 설정 |
@@ -150,12 +162,12 @@ Claude 총괄 세션에서는 `/tandem-tokens`, PowerShell에서는 `tandem/tool
 
 ## 되돌리기
 
-설치 커밋을 되돌린다. `.new` 파일과 사용자 수정 사항은 별도로 확인한다.
+설치 커밋을 되돌린다. `.new` 파일과 사용자 수정 사항은 별도로 확인한다. `-Clean`으로 옮긴 파일은 `tandem/.backup/<시각>/`에 있다.
 
 ## 알아둘 것
 
 - Codex 전역 `service_tier`가 `fast` 또는 `priority`이면 한도가 2.5배 빨리 소모될 수 있다. TANDEM은 전역 설정을 바꾸지 않고 `/tandem`과 토큰 리포트에서 알린다.
-- Codex 세션 훅에는 프로젝트 신뢰와 `/hooks` 승인이 필요하다.
+- Codex 세션 훅에는 프로젝트 신뢰와 `/hooks` 승인이 필요하다. 훅 알림은 800자에서 잘리고(`tandem/config.json`의 `hook.max_chars`), 환경변수 `TANDEM_HOOK_OFF=1`이면 훅이 아무 것도 하지 않는다.
 - 신뢰되지 않은 폴더에서 `claude -p`는 settings 권한을 무시한다. Claude 래퍼가 필요한 권한을 `--allowedTools`로 넘긴다.
 
 ## 포크해서 배포하기

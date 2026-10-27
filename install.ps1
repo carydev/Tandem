@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-  TANDEM v1.1 installer. Run from the project directory.
+  TANDEM installer. Run from the project directory. -Plan previews without writing; -Clean backs up and removes TANDEM files the current mode does not install.
 .PARAMETER JevKey
   May remain in command history; interactive input is recommended.
   명령 기록에 남을 수 있으니 대화형 입력을 권장합니다.
@@ -16,6 +16,8 @@ param(
   [switch]$SkipDeps,
   [switch]$Yes,
   [switch]$Force,
+  [switch]$Plan,
+  [switch]$Clean,
   [string]$TemplateRoot
 )
 $ErrorActionPreference = 'Stop'
@@ -27,11 +29,12 @@ $utf8 = New-Object Text.UTF8Encoding($false)
 $strictUtf8 = New-Object Text.UTF8Encoding($false,$true)
 $today = Get-Date -Format 'yyyy-MM-dd'
 $messages = @{
-  ko = @{ done='설치 완료'; unchanged='변경 없음'; added='배치'; replaced='교체'; preserved='사용자 수정 보존, .new 생성'; removed='제거'; warning='경고'; missing='소스 파일 없음'; parse='JSON 파싱 실패, .new 생성'; jevChoice='Jev(OpenRouter) 사용 방법'; jevKeyChoice='키 입력해서 사용'; jevLaterChoice='나중에 (알림 유지)'; jevOffChoice='사용 안 함 (질문·알림 끔)'; jevOn='Jev: 켜짐. 끄려면 -NoJev'; jevOff='Jev: 꺼짐. 다시 켜려면 -UseJev'; jevPrompt='Jev(OpenRouter) API 키 (Enter로 건너뜀)'; jevWarning='-JevKey 값은 명령 기록에 남을 수 있으니 대화형 입력을 권장합니다.'; newConflict='.new 가 이미 있고 내용이 다름 — 병합 후 지워라'; encoding='UTF-8 디코딩 실패, 원본 보존'; invalidPath='manifest 삭제 경로 거부'; installCodex='Codex CLI를 지금 설치할까? [y/N]'; nextClaude='다음: claude 실행 후 /tandem 입력'; nextCodex='다음: codex 실행 후 tandem/adapt.md를 읽고 적응 진행. /hooks에서 훅 승인'; exclusive='-NoJev와 -UseJev 중 하나만 지정하세요.'; badConfig='tandem/config.json 오류'; badDocs='DocsRoot는 프로젝트 안의 상대 경로여야 합니다.'; selectMode='모드 선택'; missingLang='템플릿 언어 폴더 없음'; emptyContract='tandem/files.json에 파일 목록이 없습니다.'; unresolved='해결되지 않은 템플릿 토큰'; badDestination='잘못된 설치 대상 경로'; badManifest='tandem/manifest.json 오류'; missingMarker='블록 경계 표시 없음'; badJsonTemplate='JSON 템플릿 오류' }
-  en = @{ done='Installation complete'; unchanged='No changes'; added='Installed'; replaced='Replaced'; preserved='User edit preserved; wrote .new'; removed='Removed'; warning='Warning'; missing='Missing source file'; parse='Invalid JSON; wrote .new'; jevChoice='How to use Jev (OpenRouter)'; jevKeyChoice='Enter a key and use it'; jevLaterChoice='Later (keep notices)'; jevOffChoice='Do not use (turn off prompts and notices)'; jevOn='Jev: on. Turn off with -NoJev'; jevOff='Jev: off. Turn on with -UseJev'; jevPrompt='Jev (OpenRouter) API key (Enter to skip)'; jevWarning='-JevKey may remain in command history; interactive input is recommended.'; newConflict='.new already exists with different content — merge and delete it'; encoding='UTF-8 decoding failed; original preserved'; invalidPath='Refused manifest deletion path'; installCodex='Install Codex CLI now? [y/N]'; nextClaude='Next: run claude, then /tandem'; nextCodex='Next: run codex and follow tandem/adapt.md. Approve hooks with /hooks'; exclusive='Use either -NoJev or -UseJev.'; badConfig='Invalid tandem/config.json'; badDocs='DocsRoot must be a relative path inside the project.'; selectMode='Select mode'; missingLang='Template language folder missing'; emptyContract='tandem/files.json has no files.'; unresolved='Unresolved template token'; badDestination='Invalid contract destination'; badManifest='Invalid tandem/manifest.json'; missingMarker='Missing block markers'; badJsonTemplate='Invalid JSON template' }
+  ko = @{ done='설치 완료'; unchanged='변경 없음'; added='배치'; replaced='교체'; preserved='사용자 수정 보존, .new 생성'; removed='제거'; warning='경고'; missing='소스 파일 없음'; parse='JSON 파싱 실패, .new 생성'; jevChoice='Jev(OpenRouter) 사용 방법'; jevKeyChoice='키 입력해서 사용'; jevLaterChoice='나중에 (알림 유지)'; jevOffChoice='사용 안 함 (질문·알림 끔)'; jevOn='Jev: 켜짐. 끄려면 -NoJev'; jevOff='Jev: 꺼짐. 다시 켜려면 -UseJev'; jevPrompt='Jev(OpenRouter) API 키 (Enter로 건너뜀)'; jevWarning='-JevKey 값은 명령 기록에 남을 수 있으니 대화형 입력을 권장합니다.'; newConflict='.new 가 이미 있고 내용이 다름 — 병합 후 지워라'; encoding='UTF-8 디코딩 실패, 원본 보존'; invalidPath='manifest 삭제 경로 거부'; installCodex='Codex CLI를 지금 설치할까? [y/N]'; nextClaude='다음: claude 실행 후 /tandem 입력'; nextCodex='다음: codex 실행 후 tandem/adapt.md를 읽고 적응 진행. /hooks에서 훅 승인'; exclusive='-NoJev와 -UseJev 중 하나만 지정하세요.'; badConfig='tandem/config.json 오류'; badDocs='DocsRoot는 프로젝트 안의 상대 경로여야 합니다.'; selectMode='모드 선택'; missingLang='템플릿 언어 폴더 없음'; emptyContract='tandem/files.json에 파일 목록이 없습니다.'; unresolved='해결되지 않은 템플릿 토큰'; badDestination='잘못된 설치 대상 경로'; badManifest='tandem/manifest.json 오류'; missingMarker='블록 경계 표시 없음'; badJsonTemplate='JSON 템플릿 오류'; plan='미리보기 - 아무것도 쓰지 않습니다'; planEnd='미리보기 끝. 적용하려면 -Plan 없이 다시 실행'; stale='현재 모드에 없는 TANDEM 파일 (옛 모드 또는 사용자 수정)'; cleanHint='위 파일을 tandem/.backup/ 으로 옮기고 제거하려면 -Clean'; backedUp='백업 후 제거' }
+  en = @{ done='Installation complete'; unchanged='No changes'; added='Installed'; replaced='Replaced'; preserved='User edit preserved; wrote .new'; removed='Removed'; warning='Warning'; missing='Missing source file'; parse='Invalid JSON; wrote .new'; jevChoice='How to use Jev (OpenRouter)'; jevKeyChoice='Enter a key and use it'; jevLaterChoice='Later (keep notices)'; jevOffChoice='Do not use (turn off prompts and notices)'; jevOn='Jev: on. Turn off with -NoJev'; jevOff='Jev: off. Turn on with -UseJev'; jevPrompt='Jev (OpenRouter) API key (Enter to skip)'; jevWarning='-JevKey may remain in command history; interactive input is recommended.'; newConflict='.new already exists with different content — merge and delete it'; encoding='UTF-8 decoding failed; original preserved'; invalidPath='Refused manifest deletion path'; installCodex='Install Codex CLI now? [y/N]'; nextClaude='Next: run claude, then /tandem'; nextCodex='Next: run codex and follow tandem/adapt.md. Approve hooks with /hooks'; exclusive='Use either -NoJev or -UseJev.'; badConfig='Invalid tandem/config.json'; badDocs='DocsRoot must be a relative path inside the project.'; selectMode='Select mode'; missingLang='Template language folder missing'; emptyContract='tandem/files.json has no files.'; unresolved='Unresolved template token'; badDestination='Invalid contract destination'; badManifest='Invalid tandem/manifest.json'; missingMarker='Missing block markers'; badJsonTemplate='Invalid JSON template'; plan='Preview only - nothing is written'; planEnd='Preview finished. Re-run without -Plan to apply'; stale='TANDEM file not in the current mode (old mode or user-edited)'; cleanHint='Add -Clean to move these files to tandem/.backup/ and remove them'; backedUp='Backed up and removed' }
 }
 $m = $messages[$uiLang]
 if ($NoJev -and $UseJev) { throw $m.exclusive }
+if ($Plan) { $Yes = $true }
 function Native([scriptblock]$body) {
   $old = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
   try { & $body } finally { $ErrorActionPreference = $old }
@@ -52,7 +55,14 @@ function WriteUtf8([string]$path, [string]$content) {
     $bytes = [IO.File]::ReadAllBytes($path)
     if ($bytes.Length -ge 3 -and $bytes[0] -eq 239 -and $bytes[1] -eq 187 -and $bytes[2] -eq 191) { $encoding = New-Object Text.UTF8Encoding($true) }
   }
+  if ($script:Plan) { return }
   [IO.File]::WriteAllText($path, $content, $encoding)
+}
+function WriteBytes([string]$path, [byte[]]$bytes) {
+  if ($script:Plan) { return }
+  $dir = Split-Path -Parent $path
+  if (-not (Test-Path -LiteralPath $dir)) { [void][IO.Directory]::CreateDirectory($dir) }
+  [IO.File]::WriteAllBytes($path, $bytes)
 }
 function SaveText([string]$path, [string]$content) {
   if ((Test-Path -LiteralPath $path) -and (ReadUtf8 $path) -ceq $content) { return $false }
@@ -64,9 +74,7 @@ function SaveCandidate([string]$path, [byte[]]$bytes) {
     if ((HashFile $path) -ne (HashBytes $bytes)) { Warn "$($script:m.newConflict): $path" }
     return $false
   }
-  $dir = Split-Path -Parent $path
-  if (-not (Test-Path -LiteralPath $dir)) { [void][IO.Directory]::CreateDirectory($dir) }
-  [IO.File]::WriteAllBytes($path, $bytes)
+  WriteBytes $path $bytes
   return $true
 }
 function Json($value) { return ($value | ConvertTo-Json -Depth 30) + "`n" }
@@ -164,6 +172,9 @@ if (-not $cfg.jev) { $cfg | Add-Member -NotePropertyName jev -NotePropertyValue 
 [void](Prop $cfg.jev 'enabled' $true)
 if ($NoJev) { $cfg.jev.enabled = $false }
 if ($UseJev) { $cfg.jev.enabled = $true }
+if (-not $cfg.hook) { $cfg | Add-Member -NotePropertyName hook -NotePropertyValue ([pscustomobject]@{}) -Force }
+[void](Prop $cfg.hook 'enabled' $true)
+[void](Prop $cfg.hook 'max_chars' 800)
 if (-not $cfg.update) { $cfg | Add-Member -NotePropertyName update -NotePropertyValue ([pscustomobject]@{}) -Force }
 [void](Prop $cfg.update 'repo' 'carydev/Tandem')
 [void](Prop $cfg.update 'ref' 'main')
@@ -174,12 +185,15 @@ if (-not $cfg.update) { $cfg | Add-Member -NotePropertyName update -NoteProperty
 [void](Prop $cfg 'lang' $Lang); $cfg.lang = $Lang
 [void](Prop $cfg 'updated' $today); $cfg.updated = $today
 $changes = 0
+if ($Plan) { Write-Host $m.plan -ForegroundColor Cyan }
 if (SaveText $configPath (Json $cfg)) { $changes++; Note "config.json: $($m.replaced)" }
 
 if ($cfg.jev.enabled -and $JevKey) {
   Warn $m.jevWarning
-  [Environment]::SetEnvironmentVariable('TANDEM_JEV_API_KEY', $JevKey, 'User')
-  [Environment]::SetEnvironmentVariable('TANDEM_JEV_API_KEY', $JevKey, 'Process')
+  if (-not $Plan) {
+    [Environment]::SetEnvironmentVariable('TANDEM_JEV_API_KEY', $JevKey, 'User')
+    [Environment]::SetEnvironmentVariable('TANDEM_JEV_API_KEY', $JevKey, 'Process')
+  }
 } elseif ($cfg.jev.enabled -and -not $Yes -and -not [Environment]::GetEnvironmentVariable('TANDEM_JEV_API_KEY','User') -and -not $env:TANDEM_JEV_API_KEY) {
   $choice = AskChoice $m.jevChoice @($m.jevKeyChoice,$m.jevLaterChoice,$m.jevOffChoice) '2'
   if ($choice -eq $m.jevOffChoice) {
@@ -281,8 +295,7 @@ foreach ($entry in $contract.files) {
   $oldProp = $manifest.files.PSObject.Properties[$dst]
   $oldHash = if ($oldProp) { [string]$oldProp.Value } else { '' }
   if (-not (Test-Path -LiteralPath $full)) {
-    $dir = Split-Path -Parent $full; if (-not (Test-Path -LiteralPath $dir)) { [void][IO.Directory]::CreateDirectory($dir) }
-    [IO.File]::WriteAllBytes($full, $bytes)
+    WriteBytes $full $bytes
     $manifest.files | Add-Member -NotePropertyName $dst -NotePropertyValue $newHash -Force
     $changes++; Note "$($m.added): $dst"
   } else {
@@ -290,7 +303,7 @@ foreach ($entry in $contract.files) {
     if ($currentHash -eq $newHash) {
       $manifest.files | Add-Member -NotePropertyName $dst -NotePropertyValue $newHash -Force
     } elseif ($oldHash -and $currentHash -eq $oldHash) {
-      [IO.File]::WriteAllBytes($full, $bytes)
+      WriteBytes $full $bytes
       $manifest.files | Add-Member -NotePropertyName $dst -NotePropertyValue $newHash -Force
       $changes++; Note "$($m.replaced): $dst"
     } else {
@@ -298,9 +311,30 @@ foreach ($entry in $contract.files) {
     }
   }
 }
+$staleList = New-Object 'System.Collections.Generic.List[string]'
+$backupStamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+$handled = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+function Retire([string]$relative) {
+  # A TANDEM path that the current mode does not install: left over from an old mode, or user-edited. Warn, or with -Clean back it up and remove it.
+  $full = Join-Path $root $relative
+  if ($Clean) {
+    $backup = Join-Path $root "tandem/.backup/$backupStamp/$relative"
+    if (-not $Plan) {
+      $dir = Split-Path -Parent $backup
+      if (-not (Test-Path -LiteralPath $dir)) { [void][IO.Directory]::CreateDirectory($dir) }
+      Copy-Item -LiteralPath $full -Destination $backup -Force
+      Remove-Item -LiteralPath $full -Force
+    }
+    $script:changes++; Note "$($script:m.backedUp): $relative -> tandem/.backup/$backupStamp/"
+    return $true
+  }
+  $script:staleList.Add($relative); Warn "$($script:m.stale): $relative"
+  return $false
+}
 foreach ($prop in @($manifest.files.PSObject.Properties)) {
   if ($wanted.Contains($prop.Name)) { continue }
   $relative = $prop.Name.Replace('\','/')
+  [void]$handled.Add($relative)
   $full = $null
   try {
     if (-not $knownFiles.Contains($relative) -or [IO.Path]::IsPathRooted($relative) -or $relative -match '(^|/)\.{1,2}(/|$)' -or $relative.Contains(':')) { throw 'Unexpected manifest path' }
@@ -314,9 +348,13 @@ foreach ($prop in @($manifest.files.PSObject.Properties)) {
     }
   } catch { Warn "$($m.invalidPath): $($prop.Name)"; continue }
   if (-not (Test-Path -LiteralPath $full) -or (HashFile $full) -eq $prop.Value) {
-    if (Test-Path -LiteralPath $full) { Remove-Item -LiteralPath $full -Force; $changes++; Note "$($m.removed): $($prop.Name)" }
+    if (Test-Path -LiteralPath $full) { if (-not $Plan) { Remove-Item -LiteralPath $full -Force }; $changes++; Note "$($m.removed): $($prop.Name)" }
     $manifest.files.PSObject.Properties.Remove($prop.Name)
-  } else { Warn "$($m.preserved): $($prop.Name)" }
+  } elseif (Retire $relative) { $manifest.files.PSObject.Properties.Remove($prop.Name) }
+}
+foreach ($relative in @($knownFiles)) {
+  if ($wanted.Contains($relative) -or $handled.Contains($relative)) { continue }
+  if (Test-Path -LiteralPath (Join-Path $root $relative) -PathType Leaf) { [void](Retire $relative) }
 }
 $manifest.version = $version
 if (SaveText $manifestPath (Json $manifest)) { $changes++ }
@@ -431,14 +469,14 @@ $ignoreText = ''
 if (Test-Path -LiteralPath $gitignore) {
   try { $ignoreText = ReadUtf8 $gitignore }
   catch {
-    $candidate = ".codex-last/`ntandem/.cache/`n"
+    $candidate = ".codex-last/`ntandem/.cache/`ntandem/.backup/`n"
     if (SaveCandidate "$gitignore.new" ($utf8.GetBytes($candidate))) { $changes++ }
     Warn "$($m.encoding): .gitignore"
     $ignoreText = $null
   }
 }
 if ($null -ne $ignoreText) {
-foreach ($pattern in @('.codex-last/','tandem/.cache/')) {
+foreach ($pattern in @('.codex-last/','tandem/.cache/','tandem/.backup/')) {
   if (@($ignoreText -split '\r?\n') -notcontains $pattern) {
     if ($ignoreText -and -not $ignoreText.EndsWith("`n")) { $ignoreText += "`n" }
     $ignoreText += "$pattern`n"
@@ -448,6 +486,8 @@ if (SaveText $gitignore $ignoreText) { $changes++; Note "$($m.replaced): .gitign
 }
 
 if ($changes -eq 0) { Note $m.unchanged }
+if ($staleList.Count -gt 0) { Warn $m.cleanHint }
+if ($Plan) { Write-Host $m.planEnd -ForegroundColor Cyan; exit 0 }
 Write-Host $m.done -ForegroundColor Green
 Write-Host $(if ($cfg.jev.enabled) { $m.jevOn } else { $m.jevOff })
 if ($Mode -like 'claude-*') { Write-Host $m.nextClaude } else { Write-Host $m.nextCodex }

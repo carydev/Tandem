@@ -32,6 +32,7 @@ function Summary($state) {
     Write-Output "status=$($s.result) exit=$($s.exit) out=$($s.out_exists)"
     if ($s.summary) { $s.summary -split "`r?`n" | Select-Object -Last 5 | ForEach-Object { Write-Output $_ } }
     Write-Output "session=$($s.session) resumed=$($s.resumed.ToString().ToLower()) tokens=$($s.tokens.input)/$($s.tokens.cached)/$($s.tokens.output)"
+    if ($s.review) { Write-Output "review=$($s.review)" }
 }
 function WaitDone([string]$path,[int]$seconds) {
     $until=[datetime]::UtcNow.AddSeconds([Math]::Max(0,[Math]::Min(540,$seconds)))
@@ -79,10 +80,15 @@ try {
         $result=if ($stopped) {'stopped'} elseif ($exit -eq 0 -and $exists) {'ok'} else {'fail'}
         $summary=if ($stopped) { (@($lines[0]) + @(@($lines | Select-Object -Skip 1) | Select-Object -Last 4)) -join "`n" } else { (@($lines | Select-Object -Last 5)) -join "`n" }
         if (!$note -and $result -eq 'fail' -and (Test-Path -LiteralPath $s.err)) { $note=([IO.File]::ReadAllText($s.err,[Text.Encoding]::UTF8) -split "`r?`n" | Select-Object -First 2) -join ' ' }
-        $record=@{ts=[datetime]::Now.ToString('o');task=$s.task;round=$s.round;model=$s.model;effort=$s.effort;result=$result;escalated_from=$(if ($s.escalated_from) {$s.escalated_from} else {$null});reason=$(if ($s.reason) {$s.reason} else {$null});workers=$null;out=(Relative $s.out $root);session=$session;resumed=$resumed;tokens=$tokens;thread_total=$threadTotal;decided_by=$s.decided_by;note=$note}
+        $review=''; $findings=$null
+        if ($s.round -eq 'R2' -and $exists) {
+            try { $review=[string](@(& (Join-Path $PSScriptRoot 'review-check.ps1') -Review $s.out) | Select-Object -First 1) } catch { $review='' }
+            if ($review -match 'confirmed=(\d+) needs_validation=(\d+) rejected=(\d+)') { $findings=@{confirmed=[int]$matches[1];needs_validation=[int]$matches[2];rejected=[int]$matches[3]} }
+        }
+        $record=@{ts=[datetime]::Now.ToString('o');task=$s.task;round=$s.round;model=$s.model;effort=$s.effort;result=$result;escalated_from=$(if ($s.escalated_from) {$s.escalated_from} else {$null});reason=$(if ($s.reason) {$s.reason} else {$null});workers=$null;out=(Relative $s.out $root);session=$session;resumed=$resumed;tokens=$tokens;thread_total=$threadTotal;findings=$findings;decided_by=$s.decided_by;note=$note}
         $log=Join-Path $s.docs 'log/runs.jsonl'; [IO.Directory]::CreateDirectory((Split-Path $log)) | Out-Null
         [IO.File]::AppendAllText($log,($record | ConvertTo-Json -Compress -Depth 8)+"`n",$utf8)
-        $done=@{result=$result;exit=$exit;out_exists=$exists;summary=$summary;session=$session;resumed=$resumed;tokens=$tokens}
+        $done=@{result=$result;exit=$exit;out_exists=$exists;summary=$summary;session=$session;resumed=$resumed;tokens=$tokens;review=$review}
         [IO.File]::WriteAllText($RunnerState+'.done.json',($done | ConvertTo-Json -Compress -Depth 8),$utf8)
         exit 0
     }

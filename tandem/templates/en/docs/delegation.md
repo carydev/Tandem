@@ -30,3 +30,14 @@ codex-run.ps1 is installed but is used only for R2 at the mid tier in a separate
 @@if claude-solo codex-solo
 Native subagent calls have no wrapper. The lead appends one line per call to {{DOCS}}/log/runs.jsonl, recording unknown tokens and session as null and the actual decision source in decided_by. Follow log/README.md for the format.
 @@endif
+
+## R2 Verdicts and R3 Responses
+
+R2 numbers each finding (F1, F2, ...) and gives it exactly one verdict. `confirmed` is a defect with evidence (path:line or location in the deliverable) and a severity (high/medium/low); `needs_validation` is a finding whose evidence could not be verified (no severity; `unknown=` names the fact); `rejected` is a candidate dismissed during review (`reason=`). Provide at least three confirmed + needs_validation findings.
+The lead checks the format with `tandem/tools/review-check.ps1 -Review <R2 path>`. `status=fail` means there are no verdict lines, so request R2 again. The lead reads `warn` lines and decides.
+@@if claude-main codex-main
+After an R2 call, the wrapper runs the same check, adds a `review=` line to the summary, and records `findings` in runs.jsonl.
+@@endif
+Someone other than the finder verifies needs_validation items: the lead checks directly or assigns a separate verification task. The lead then rules confirmed or rejected.
+R3 answers every confirmed and needs_validation item in one line: `- F1 fixed|disputed|deferred <one line>`. `review-check.ps1 -Review <R2> -Response <R3>` reports missing IDs.
+Reject the work if a confirmed high finding is not fixed. The lead rules on disputed items; anything still open after three rounds is recorded as an open issue.

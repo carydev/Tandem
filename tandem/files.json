@@ -41,6 +41,8 @@
     { "src": "tandem/tools/jev.ps1",                "dst": "tandem/tools/jev.ps1",                 "kind": "copy", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "tandem/tools/manifest.ps1",           "dst": "tandem/tools/manifest.ps1",            "kind": "copy", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "tandem/tools/diff.ps1",               "dst": "tandem/tools/diff.ps1",                "kind": "copy", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
+    { "src": "tandem/tools/review-check.ps1",       "dst": "tandem/tools/review-check.ps1",        "kind": "copy", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
+    { "src": "tandem/tools/lessons.ps1",            "dst": "tandem/tools/lessons.ps1",             "kind": "copy", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "tandem/tools/codex-run.ps1",          "dst": "tandem/tools/codex-run.ps1",           "kind": "copy", "modes": ["claude-main", "codex-solo"] },
     { "src": "tandem/tools/batch-run.ps1",          "dst": "tandem/tools/batch-run.ps1",           "kind": "copy", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "tandem/tools/claude-run.ps1",         "dst": "tandem/tools/claude-run.ps1",          "kind": "copy", "modes": ["codex-main"] }

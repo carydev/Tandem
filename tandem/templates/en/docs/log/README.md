@@ -10,7 +10,7 @@ Record `escalated_from` and `reason` separately, using null when absent.
 @@endif
 
 Example:
-{"ts":"2026-10-13T09:00:00+09:00","task":"T-12","round":"R1","model":"model ID","effort":"high","result":"ok","escalated_from":null,"reason":null,"workers":null,"out":"{{DOCS}}/reports/work/T-12_v1.md","session":"session ID","resumed":false,"tokens":{"input":0,"cached":0,"output":0},"thread_total":{"input":0,"cached":0,"output":0},"decided_by":"table","note":""}
+{"ts":"2026-10-13T09:00:00+09:00","task":"T-12","round":"R1","model":"model ID","effort":"high","result":"ok","escalated_from":null,"reason":null,"workers":null,"out":"{{DOCS}}/reports/work/T-12_v1.md","session":"session ID","resumed":false,"tokens":{"input":0,"cached":0,"output":0},"thread_total":{"input":0,"cached":0,"output":0},"findings":null,"decided_by":"table","note":""}
 
 | Field | Meaning |
 |---|---|
@@ -26,6 +26,7 @@ Example:
 | tokens | input/cached/output usage for this call, or null if unknown |
 | resumed | Whether the prior session was resumed |
 | thread_total | Cumulative input/cached/output for the session, or null if unknown |
+| findings | R2 verdict counts {confirmed, needs_validation, rejected}; null when not R2 or unknown |
 | decided_by | jev/table/human |
 | note | Reason for failure or other noteworthy details |
 

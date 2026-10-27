@@ -27,7 +27,7 @@ tandem/
   files.json                 파일 계약: 무엇을 어느 모드에 어디로 놓는가
   templates/ko/, en/         언어별 템플릿 (상대 경로 구조 동일)
     claude/ codex/ docs/ blocks/ settings.json adapt.md
-  tools/*.ps1                설치 대상에 그대로 복사되는 도구 (check, token-report, jev, manifest, diff, batch-run, codex-run, claude-run)
+  tools/*.ps1                설치 대상에 그대로 복사되는 도구 (check, token-report, jev, manifest, diff, review-check, lessons, batch-run, codex-run, claude-run)
 docs/plan-plugin-distribution.md  보류된 플러그인 배포 계획
 docs/design-v1.1.md          v1.1 설계서 (모드, 렌더링, 지문 업데이트, 훅, Jev, 리포트, 래퍼)
 README.md / README.ko.md     사용자 문서 (영어 기본 / 한국어). 함께 고친다
@@ -72,6 +72,9 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 | `--ephemeral` 금지, `-C`는 프로젝트 루트 고정 | ephemeral 스레드는 resume 불가(`no rollout found`). 폴더가 바뀌면 캐시 0 |
 | 반복 항목 작업은 `batch-run.ps1` (묶음당 세션 하나, 고정 블록은 첫 턴에만, 세션 교체 상한, `-OnlyChanged`, 연속 3건 실패 중단, 항목별 증분 usage.jsonl + runs.jsonl 1줄) + `docs/batch.md` 규칙 6개 | 사용자 결정(2026-10-19): 역식 프로젝트만 고치지 않고 모든 프로젝트에 같이 적용되게. 자체 루프(Python)가 있는 프로젝트는 같은 규칙을 어댑터에 구현 |
 | 토큰 보고서가 낭비 패턴 3종을 수치로 (캐시율, 1턴 세션 비율, 상태 확인 호출 수, 비캐시 20k 이상 1턴 세션) + 진단 2줄만 | 문서 규칙은 안 지켜진다(역식 AGENTS.md에 '기다린다'가 있었지만 28초마다 264회 폴링). 수치가 있어야 잡힌다 |
+| **R2 판정은 세 가지만** (`F<n> [confirmed|needs_validation|rejected]`). confirmed 만 심각도, 근거 없으면 confirmed 금지. R3 는 ID 마다 `fixed|disputed|deferred`. `review-check.ps1` 이 형식·누락 검사, 래퍼가 R2 뒤 자동 실행해 `findings` 기록. 발견자는 검증 안 함 | 사용자 결정(2026-10-27, 깃허브 트렌딩 조사 반영). 자유 서술 R2 는 총괄이 매번 해석해야 하고 근거 없는 지적이 심각도를 달고 올라왔다. cloudflare/security-audit-skill 의 발견자≠검증자·3판정 구조를 가져옴 |
+| 설치기 `-Plan` 은 아무것도 안 쓰고(환경변수 포함) `-Yes` 를 함의. `-Clean` 은 현재 모드에 없는 TANDEM 경로(files.json 전 모드 dst 중 현재 모드 미포함, 또는 manifest 지문 불일치)를 `tandem/.backup/<시각>/` 로 복사 후 제거. 기본은 경고만 | 사용자 결정(2026-10-27). 2026-10-19 manga-trans 전환 때 옛 모드 파일 5개가 말없이 남았다. ai-memory 의 `--plan` 미리보기·"내가 설치한 것만, 백업 남기고" 방식. 자동 삭제는 하지 않는다 - 사용자 파일일 수 있다 |
+| 교훈 줄 끝 `(xN)` 횟수, `lessons.ps1 -Tags` 가 횟수순 최대 3줄. `(x3)` 승격. 세션 시작 로드는 여전히 안 함. 훅 알림 800자 상한(`hook.max_chars`/`TANDEM_HOOK_MAX_CHARS`), `TANDEM_HOOK_OFF=1`·`hook.enabled=false` 끄기 | 사용자 결정(2026-10-27). ECC 의 주입 상한·훅 스위치, ai-memory 의 사용 빈도 점수를 가져오되 "상시 로드 안 함" 결정(2026-10-14)은 유지. 횟수가 있어야 40줄 규칙의 "3회 반복" 을 셀 수 있다 |
 
 ## 검증된 것 (v1.1, 2026-10-13, Windows PowerShell 5.1.19041)
 
@@ -110,7 +113,19 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - 가짜 CLI: resume 옵션 위치, R2·승급·`-NewSession`은 새 세션, `no rollout found` → 새 세션 재시도, 증분 계산, 세션 교체(7항목/3) → 3세션, `-OnlyChanged` 전부 skipped, 연속 3건 실패 → `STOPPED:`, 최상위 게이트, DryRun (C22·C24)
 - 토큰 보고서: 가짜 Claude 30건·Codex 12세션 → 캐시율, 1턴 10/12, 상태 확인 25, 비캐시 20k 이상 10(중앙값 45k), 진단 2줄, `timestamp` 없으면 `n/a` (C23). 이 저장소 실제 실행 OK
 
+## 검증된 것 (v1.6, 2026-10-27)
+
+- 설치 8조합(4모드×ko/en) 빈 git 폴더에서 성공, 자리표시자·조건 줄 잔존 0, 도구 9개(codex-main·claude-solo 는 8개) 배치, config `hook` 기본값 기록
+- claude-main → codex-solo 전환: `-Plan` 이 파일 해시를 하나도 바꾸지 않음(스냅샷 비교), 미수정 파일 제거·수정 파일 경고·manifest 밖 고아 파일 경고, `-Clean` 이 3개를 `tandem/.backup/<시각>/` 로 옮기고 manifest 에서 제거, 재실행 멱등
+- `review-check.ps1`: 판정 5건 샘플에서 confirmed 근거·심각도 누락, needs_validation 심각도·미확인 누락, R3 응답 누락·잘못된 값 모두 잡음. 판정 줄 없는 파일은 `status=fail`. 절대/상대 경로 모두 처리
+- `lessons.ps1`: 태그 필터, `(xN)` 내림차순·날짜 내림차순, `-Top`, 파일 없으면 무출력
+- `check.ps1`: `TANDEM_HOOK_MAX_CHARS=12` 로 `...` 잘림, `TANDEM_HOOK_OFF=1` 과 `hook.enabled=false` 둘 다 무출력 exit 0
+- 변경한 PowerShell 7개 파서 통과. 래퍼의 R2 자동 review-check 는 실제 Codex/Claude 호출로는 미확인 (아래 남은 일)
+
 ## 검증 안 된 것 (남은 일)
+
+- 래퍼(`codex-run`/`claude-run`) R2 뒤 자동 `review-check` 실행과 `findings` 기록을 실제 호출로 확인 (코드 경로만 파서 검증)
+- 이 PC 에서 PowerShell 프로세스마다 `Get-UICulture` 가 ko-KR/en-US 로 다르게 잡힌다 (2026-10-27, 같은 명령 연속 실행에서 메시지 언어가 바뀜). 도구들은 config.json 의 lang 을 우선 쓰므로 설치본에서는 영향 없음. 원인 미확인
 
 - **Codex 훅**: `.codex/hooks.json`은 프로젝트 신뢰 + `/hooks` 승인 후에만 돈다. 실제 Codex 세션에서 알림 표시 미확인
 - **Claude 훅 알림 표시**: settings 병합까지만 확인. 실제 세션 시작 화면 표시 미확인
@@ -122,7 +137,7 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - `%TEMP%` 아래 임시 폴더에서 Codex `--sandbox workspace-write` 쓰기가 'environment setup error'로 실패 (실제 프로젝트 폴더에서는 미재현). 임시 설치본 실호출 시험은 read-only 또는 batch-run으로
 - claude-run `--resume` 실호출 (가짜 CLI만 확인). Claude 세션 디렉터리가 바뀌면 resume 실패 → 새 세션 재시도 경로만 가짜로 확인
 - 긴 이어쓰기 스레드의 캐시 읽기 누적 비용 vs 고정 블록 재전송의 손익분기 (추정: 이미지 10k/호출이면 약 10호출, 텍스트만이면 약 25호출). batch-run 기본 30/150k는 텍스트 기준
-- **모드 전환 때 옛 모드 전용 파일이 남는다**: 설치기는 manifest 지문이 맞는 파일만 제거한다. 사용자 수정으로 `.new` 를 거쳐 병합된 파일(지문 불일치, manifest 에 없음)은 새 모드에서 빠져도 그대로 남고 경고도 없다 (2026-10-19 manga-trans claude-main→codex-solo 전환: `tandem-manager/dispatch/critic.md`, `tandem-status.md`, `work-lead.toml` 5개를 수동 삭제). 설치기가 "알려진 경로인데 현재 모드에 없음" 을 경고하도록 개선 필요
+- ~~모드 전환 때 옛 모드 전용 파일이 남는다~~ → v1.6 에서 경고 + `-Clean` 으로 해결 (2026-10-27)
 
 ## 진행 상황
 
@@ -167,6 +182,8 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
       - 배포 검증: 원격 VERSION 1.5, 실제 URL 설치(codex-main, ko) 성공 - batch-run.ps1·docs/batch.md 배치, claude-run에 resume. 태그 `v1.5` + GitHub Releases. 내가 고친 것: batch-run의 `--image` 뒤에 `resume`이 오면 이미지 경로로 먹히는 버그(MT-902 보고서에서 발견) → 이미지 인자를 앞으로 이동, 메시지 ko/en 분리 + BOM
       - 역식(manga-trans) MT-902 완료: 하네스 테스트 97개 통과, 실제 2쪽 호출 이어쓰기 캐시 93.6%, `wait_run.py`. **커밋은 안 했다** (그 저장소는 커밋 위임 없음, `harness/` 폴더 자체가 미추적 상태). TANDEM 설치본은 v1.2.1 그대로 - 업그레이드 여부는 사용자 결정
       - 같은 날 manga-trans 설치본을 v1.5 로 올리고(claude-main, `.new` 17개 수동 병합), 이어서 사용자 결정으로 **codex-solo 전환**: 설치기 `-Mode codex-solo` 가 CLAUDE.md 블록·Claude 세션 훅 제거, `.codex/hooks.json` 배치, AGENTS 블록 교체까지 자동. 옛 모드의 사용자 수정 파일 5개는 수동 삭제(위 남은 일). `.new` 9개는 프로젝트 이력 머리말·실측 절을 보존해 병합. 역시 커밋은 안 함
+- [x] **v1.6** (2026-10-27): 깃허브 트렌딩 조사(사용자 요청)에서 고른 3건 반영 - R2 판정 스키마 + `review-check.ps1` + 래퍼 자동 검사·`findings`, 설치기 `-Plan`/`-Clean` + 잔존 파일 경고 + `tandem/.backup/`, 교훈 `(xN)` + `lessons.ps1`, 훅 알림 상한·끄기 스위치(`config.hook`)
+      - Codex 카드 없이 Claude 가 직접 구현 (설치기·템플릿 ko/en·도구가 얽혀 있어 위임 비용이 더 컸다). 검토한 저장소: cloudflare/security-audit-skill, akitaonrails/ai-memory, affaan-m/ECC (ruflo 예산 상한·openbot 한도 리셋 표시는 보류)
 - [ ] **보류** 플러그인 방식 배포 (Claude `/plugin`, Codex `codex plugin`) - 한 줄 설치는 공식 마켓플레이스 심사가 필요해 보류. 계획: `docs/plan-plugin-distribution.md`
 
 ## 지키면 좋을 것

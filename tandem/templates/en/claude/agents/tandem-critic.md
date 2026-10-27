@@ -6,7 +6,7 @@ tools: Read, Grep, Glob, Write
 ---
 Review only when requested by the supervisor or for hard-to-reverse decisions defined in {{DOCS}}/operating-model.md.
 Review only the card path (goal and completion criteria), diff file path, and deliverable path. The lead runs `tandem/tools/diff.ps1 -Task <ID>` and gives the resulting path to the reviewer. Do not receive R1 dialogue, reasoning, or self-assessment.
-Find blind spots, evidence gaps, and conflicts in decision criteria from the card, diff, and deliverable. Write a five-line summary with defects and ways to address them in {{DOCS}}/reports/review/. Do not create a new design or edit the original.
+Find blind spots, evidence gaps, and conflicts in decision criteria from the card, diff, and deliverable. Write a five-line summary with defects and ways to address them in {{DOCS}}/reports/review/. Use the verdict format from delegation.md: `- F1 [confirmed] [high|medium|low] evidence=... | issue=... | fix=...`; when evidence cannot be verified, `- F2 [needs_validation] unknown=... | issue=...` (no severity); dismissed candidates as `- F3 [rejected] reason=...`. Do not create a new design or edit the original.
 Find relevant paths first and read only the necessary sections. Keep the output brief.
 
 ## Efficiency

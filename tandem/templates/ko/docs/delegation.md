@@ -30,3 +30,14 @@ codex-run.ps1은 배치되지만 R2의 mid 단계 별도 읽기 전용 세션에
 @@if claude-solo codex-solo
 네이티브 하위 호출에는 래퍼가 없다. 총괄이 호출 1회마다 {{DOCS}}/log/runs.jsonl에 한 줄 append하고, 알 수 없는 tokens·session은 null, decided_by는 실제 판단 주체로 기록한다. 형식은 log/README.md를 따른다.
 @@endif
+
+## R2 판정과 R3 응답
+
+R2 는 지적마다 번호(F1, F2…)와 판정 하나를 쓴다. `confirmed` 는 근거(경로:줄 또는 산출물 위치)와 심각도(높음/중간/낮음)가 있는 결함, `needs_validation` 은 근거를 확인하지 못한 지적(심각도 없음, `미확인=` 에 어떤 사실인지), `rejected` 는 검토 중 기각한 후보(`이유=`)다. confirmed + needs_validation 은 최소 3개다.
+총괄은 `tandem/tools/review-check.ps1 -Review <R2 경로>` 로 형식을 확인한다. `status=fail` 은 판정 줄이 없는 것이니 R2 를 다시 받는다. `warn` 줄은 총괄이 읽고 판단한다.
+@@if claude-main codex-main
+래퍼는 R2 호출 뒤 같은 검사를 자동으로 돌려 요약에 `review=` 줄을 붙이고 runs.jsonl 에 `findings` 를 기록한다.
+@@endif
+needs_validation 은 발견자가 아닌 쪽이 사실을 확인한다. 총괄이 직접 확인하거나 확인 과제를 따로 준다. 확인되면 confirmed, 아니면 rejected 로 총괄이 판정한다.
+R3 는 confirmed 와 needs_validation 마다 한 줄로 답한다: `- F1 fixed|disputed|deferred <한 줄>`. `review-check.ps1 -Review <R2> -Response <R3>` 가 빠진 ID 를 알린다.
+confirmed 높음 이 fixed 가 아니면 반려한다. disputed 는 총괄이 판정하고, 3라운드 뒤에도 남은 것은 쟁점으로 기록한다.

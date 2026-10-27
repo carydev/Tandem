@@ -22,4 +22,4 @@ The Codex worker writes to work/. The Codex lead reviews the summary first.
 @@endif
 
 Each output states the task ID, author role and model, round, conclusion, evidence and sources, unresolved issues, and verification results.
-Keep the opening summary to five lines or fewer. R2 identifies at least three weaknesses, each with evidence and severity.
+Keep the opening summary to five lines or fewer. R2 writes each finding as a verdict line `- F1 [confirmed|needs_validation|rejected]`: confirmed requires evidence and severity, needs_validation names the unverified fact without a severity, rejected gives the reason. At least three confirmed + needs_validation. Format: delegation.md, "R2 Verdicts and R3 Responses".

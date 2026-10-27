@@ -65,6 +65,12 @@ Measured on 2026-10-19 with Codex CLI, gpt-5.6-luna, and a 20k-token prompt:
 | `exec resume`, turns 2 and 3 | 99% of turn input |
 | `--ephemeral` | Resume unavailable; Codex usage is cumulative per thread |
 
+### Review verdicts
+
+An R2 review writes one verdict line per finding: `F1 [confirmed|needs_validation|rejected]`. confirmed requires evidence (path:line) and a severity; needs_validation names the unverified fact without a severity; rejected gives the reason. Fewer than three confirmed + needs_validation findings counts as agreement only.
+`tandem/tools/review-check.ps1` checks the format and missing R3 answers (`F1 fixed|disputed|deferred`). After an R2 call the wrapper runs it automatically, adds a `review=` line to the summary, and records the counts in `runs.jsonl`.
+The finder does not verify: the lead checks needs_validation items directly or through a separate task, then rules confirmed or rejected.
+
 ### What you get
 
 | Feature | Purpose |
@@ -73,11 +79,15 @@ Measured on 2026-10-19 with Codex CLI, gpt-5.6-luna, and a 20k-token prompt:
 | Task cards and G1/G2 | Define scope and keep confirmation and briefing with you |
 | Three-round discussion | Record objections and unresolved issues |
 | Run log and token report | Track calls and detect costly patterns |
+| Review check | Verify the R2 verdict format and missing R3 answers mechanically |
+| Failure lessons | One-line lessons with an `(xN)` count; `lessons.ps1` returns the top three when writing a card |
 | Operating docs | Keep roles, ownership, routing, and status in one place |
 
 ### Working rules
 
 All roles clarify assumptions, keep solutions simple, and edit only what the task needs. Workers set verifiable completion checks and repeat until they pass; after the same failure three times, they stop and record the block. These rules paraphrase [a community collection of Andrej Karpathy's observations](https://github.com/forrestchang/andrej-karpathy-skills), not a repository maintained by Karpathy.
+
+Failure lessons are one line each in `lessons.md` with an `(xN)` count; before writing a card, `tandem/tools/lessons.ps1 -Tags <tag>` returns the three most frequent matching lines. Nothing is read at session start. The session-start notice is cut at 800 characters (`hook.max_chars`, `TANDEM_HOOK_MAX_CHARS`) and disabled with `TANDEM_HOOK_OFF=1` or `hook.enabled=false`.
 
 Execution wrappers wait without repeated polling and log calls automatically. Unspecified Claude subagents default to `sonnet` through `CLAUDE_CODE_SUBAGENT_MODEL`. Session rules keep related work together and start a new session for unrelated work; efficiency rules limit reading and test output to what the task needs.
 
@@ -124,6 +134,8 @@ path\to\Tandem\install.ps1 -Mode codex-main -Lang en
 | `-SkipDeps` | Skip dependency and login checks |
 | `-Yes` | Use defaults without prompts |
 | `-Force` | Re-run placement; user-edited files still go to `.new` |
+| `-Plan` | Preview only: shows what would be installed, replaced, removed, or warned about, and writes nothing (defaults, no prompts) |
+| `-Clean` | Move TANDEM files the current mode does not install (old-mode leftovers, user-edited files) to `tandem/.backup/<timestamp>/` and remove them |
 
 Use the `scriptblock` form in Quick start to pass options to the one-line installer.
 
@@ -134,13 +146,13 @@ Use the `scriptblock` form in Quick start to pass options to the one-line instal
 3. Inserts applicable TANDEM blocks into `CLAUDE.md` and `AGENTS.md` and merges settings and hooks.
 4. Writes `tandem/config.json` and `tandem/manifest.json`; adds cache and run-output paths to `.gitignore`.
 
-On update, unchanged TANDEM-owned files are replaced automatically. User-edited files stay in place and the new version goes to `<file>.new`. Session-start hooks can announce a newer version and a missing Jev key. Codex hooks require project trust and `/hooks` approval.
+On update, unchanged TANDEM-owned files are replaced automatically. User-edited files stay in place and the new version goes to `<file>.new`. TANDEM files the current mode does not install (leftovers from a mode switch, user-edited files) are only warned about; `-Clean` moves them to `tandem/.backup/` and removes them. Use `-Plan` to preview first. Session-start hooks can announce a newer version and a missing Jev key. Codex hooks require project trust and `/hooks` approval.
 
 ### What gets installed
 
 | Scope | Files |
 |---|---|
-| All modes | `docs/tandem/` (or `-DocsRoot`), `tandem/adapt.md`, `tandem/config.json`, `tandem/manifest.json`, shared scripts in `tandem/tools/` |
+| All modes | `docs/tandem/` (or `-DocsRoot`), `tandem/adapt.md`, `tandem/config.json`, `tandem/manifest.json`, shared scripts in `tandem/tools/` (check, token report, Jev, manifest, diff, review check, lessons, batch run) |
 | `claude-main` | Claude manager, dispatcher, critic, and commands; Codex work lead and agents; Claude settings and project instruction blocks |
 | `codex-main` | Codex configuration and hook; Claude worker doc and settings; `tandem/tools/claude-run.ps1` |
 | `claude-solo` | Claude lead, critic, top/mid/light agents and commands; Claude settings |
@@ -150,12 +162,12 @@ The file set follows the mode. Shared tools cover checks, Jev, manifests, and to
 
 ## Undo
 
-Revert your install commit. Review any `.new` files and user edits separately.
+Revert your install commit. Review any `.new` files and user edits separately. Files moved by `-Clean` are in `tandem/.backup/<timestamp>/`.
 
 ## Good to know
 
 - A global Codex `service_tier` of `fast` or `priority` can consume limits 2.5 times faster. TANDEM does not change global settings; `/tandem` and the token report flag this.
-- Codex session hooks require project trust and `/hooks` approval.
+- Codex session hooks require project trust and `/hooks` approval. Hook notices are cut at 800 characters (`hook.max_chars` in `tandem/config.json`), and the hook does nothing when the environment variable `TANDEM_HOOK_OFF=1` is set.
 - In an untrusted folder, `claude -p` ignores settings permissions. The Claude wrapper passes needed permissions with `--allowedTools`.
 
 ## Fork and publish your own
