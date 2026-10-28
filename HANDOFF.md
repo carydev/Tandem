@@ -130,6 +130,8 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - 실제 호출: codex-solo 임시 설치본에서 `codex-run.ps1 -Model gpt-5.6-luna -Effort low -Sandbox read-only` 1회 → runs.jsonl 에 kind=codex-run, agent=codex-lead, title(카드 첫 줄), duration_s=22 기록, 표에 한 줄로 나옴
 - `run-table.ps1`: 망가트랜스 runs.jsonl 사본 25건(예전 `tokens.total` 형식) 표시, 혼합 기록(새 형식·예전 형식·배치·tokens null·깨진 줄·`|` 들어간 값) 처리, session 으로 Codex 세션 파일 토큰 채우기(50k), `-Task none` 빈 표, `-Max` 잘림 안내, 합계 캐시 표시
 - 변경 PowerShell 4개 파서 통과. claude-run·batch-run 의 새 필드는 실제 호출로 미확인(codex-run 과 같은 코드 경로)
+- Codex 하위 에이전트도 자기 rollout 파일(`session_meta.source.subagent.thread_spawn.parent_thread_id`)을 남김을 확인 - session 으로 토큰 채우기 가능. 총괄이 하위 스레드 ID 를 실제로 기록하는지는 미확인
+- 배포 검증: 태그 `v1.7` + GitHub Releases, 실제 URL 한 줄 설치(claude-solo, ko) 성공 - version 1.7, 도구 9개에 run-table 포함, `-Task none` 빈 표 출력. manga-trans 설치본은 v1.5 그대로 - 업그레이드는 사용자 결정
 
 ## 검증 안 된 것 (남은 일)
 
