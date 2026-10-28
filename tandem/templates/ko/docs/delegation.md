@@ -28,7 +28,7 @@ Codex 총괄 → .codex/agents/researcher, implementer, reviewer. 역할 이름 
 codex-run.ps1은 배치되지만 R2의 mid 단계 별도 읽기 전용 세션에만 쓴다.
 @@endif
 @@if claude-solo codex-solo
-네이티브 하위 호출에는 래퍼가 없다. 총괄이 호출 1회마다 {{DOCS}}/log/runs.jsonl에 한 줄 append하고, 알 수 없는 tokens·session은 null, decided_by는 실제 판단 주체로 기록한다. 형식은 log/README.md를 따른다.
+네이티브 하위 호출에는 래퍼가 없다. 총괄이 호출 1회마다 {{DOCS}}/log/runs.jsonl에 한 줄 append하고, 알 수 없는 tokens·session은 null, decided_by는 실제 판단 주체로 기록한다. 에이전트 이름·카드 제목·걸린 시간(agent, title, duration_s)도 남긴다. 형식은 log/README.md를 따른다.
 @@endif
 
 ## R2 판정과 R3 응답

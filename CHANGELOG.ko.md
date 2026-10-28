@@ -2,6 +2,12 @@
 
 [English](CHANGELOG.md) | **한국어**
 
+## v1.7 (2026-10-28)
+
+- 실행 표: 새 도구 `run-table.ps1 -Task <ID>` 가 `runs.jsonl` 로 종류·에이전트·모델·맡긴 작업·상태·시간·토큰 표와 합계(캐시 포함)를 만든다. 위임이 없으면 "없음" 한 줄 표. 총괄은 중간·완료 보고 끝에 이 표를 항상 붙인다(간결 보고 규칙 3의 예외로 명시).
+- `runs.jsonl` 에 `kind`·`agent`·`title`·`duration_s` 필드. codex-run·claude-run·batch-run 이 자동 기록하고(`-Agent` 로 이름 지정 가능), 네이티브 하위 호출은 총괄이 적는다. 카드 첫 줄은 `# <ID> <한 줄 제목>`. 예전 기록과 `tokens: {"total": N}` 형식도 읽는다. Codex 하위 에이전트 토큰을 모르면 session 으로 Codex 세션 파일에서 채운다.
+- 업그레이드: 설치기를 다시 실행한다. `tandem/tools/run-table.ps1` 이 추가되고 CLAUDE.md·AGENTS.md 블록, lead-charter·delegation·log·tasks 문서와 래퍼 3종이 바뀐다.
+
 ## v1.6 (2026-10-27)
 
 - R2 검토 판정 스키마: 지적마다 `F1 [confirmed|needs_validation|rejected]` 한 줄. confirmed 는 근거와 심각도 필수, needs_validation 은 심각도 없이 미확인 사실, rejected 는 기각 이유. 새 도구 `review-check.ps1` 이 형식과 R3 응답(`fixed|disputed|deferred`) 누락을 검사하고, 래퍼는 R2 뒤 자동 실행해 요약에 `review=` 줄, `runs.jsonl` 에 `findings` 를 남긴다. 발견자는 검증하지 않는다 (cloudflare/security-audit-skill 의 발견자≠검증자 구조를 가져옴).

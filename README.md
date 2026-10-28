@@ -71,6 +71,19 @@ An R2 review writes one verdict line per finding: `F1 [confirmed|needs_validatio
 `tandem/tools/review-check.ps1` checks the format and missing R3 answers (`F1 fixed|disputed|deferred`). After an R2 call the wrapper runs it automatically, adds a `review=` line to the summary, and records the counts in `runs.jsonl`.
 The finder does not verify: the lead checks needs_validation items directly or through a separate task, then rules confirmed or rejected.
 
+### Run table
+
+The lead ends interim and completion reports with a table of the subagents used for the task. `tandem/tools/run-table.ps1 -Task <ID,ID>` builds it from `runs.jsonl`.
+
+```
+| Kind | Agent | Model | Task | Status | Time | Tokens |
+|---|---|---|---|---|---:|---:|
+| single | codex-lead | gpt-5.6-luna (low) | T-1 table test call | done | 22s | 50k |
+| **Total** | 1 runs | | | | 22s | 50k (39k cached) |
+```
+
+With nothing delegated, `-Task none` prints a one-row "none" table. Wrappers record `agent`, `title` (card first line `# <ID> <title>`), and `duration_s`; for native subagent calls the lead logs the same fields. When a Codex subagent's tokens are unknown, they are read from its Codex session file by the logged session. The lead's own usage is not in the table (see the token report). `-Since today|2h|all`, `-Max 10`.
+
 ### What you get
 
 | Feature | Purpose |
@@ -81,6 +94,7 @@ The finder does not verify: the lead checks needs_validation items directly or t
 | Run log and token report | Track calls and detect costly patterns |
 | Review check | Verify the R2 verdict format and missing R3 answers mechanically |
 | Failure lessons | One-line lessons with an `(xN)` count; `lessons.ps1` returns the top three when writing a card |
+| Run table | Agent, model, task, status, time, and tokens at the end of each report (`run-table.ps1`) |
 | Operating docs | Keep roles, ownership, routing, and status in one place |
 
 ### Working rules
@@ -152,7 +166,7 @@ On update, unchanged TANDEM-owned files are replaced automatically. User-edited 
 
 | Scope | Files |
 |---|---|
-| All modes | `docs/tandem/` (or `-DocsRoot`), `tandem/adapt.md`, `tandem/config.json`, `tandem/manifest.json`, shared scripts in `tandem/tools/` (check, token report, Jev, manifest, diff, review check, lessons, batch run) |
+| All modes | `docs/tandem/` (or `-DocsRoot`), `tandem/adapt.md`, `tandem/config.json`, `tandem/manifest.json`, shared scripts in `tandem/tools/` (check, token report, Jev, manifest, diff, review check, lessons, run table, batch run) |
 | `claude-main` | Claude manager, dispatcher, critic, and commands; Codex work lead and agents; Claude settings and project instruction blocks |
 | `codex-main` | Codex configuration and hook; Claude worker doc and settings; `tandem/tools/claude-run.ps1` |
 | `claude-solo` | Claude lead, critic, top/mid/light agents and commands; Claude settings |

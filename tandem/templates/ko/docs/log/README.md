@@ -6,15 +6,20 @@
 @@endif
 @@if claude-solo codex-solo
 래퍼가 없는 네이티브 하위 호출은 총괄이 호출 1회마다 runs.jsonl에 한 줄 append한다. tokens와 session을 알 수 없으면 null로 기록하고 decided_by를 반드시 기록한다. 가능하면 resumed와 thread_total도 기록한다.
+`kind`는 native, `agent`는 호출한 하위 에이전트 이름, `title`은 카드 제목, `duration_s`는 걸린 초다. Claude Agent 결과의 total_tokens는 `tokens: {"total": N}`, duration_ms는 1000으로 나눠 기록한다. Codex 하위 에이전트는 session(스레드 ID)을 기록하면 실행 표가 Codex 세션 파일에서 토큰을 채운다.
 `escalated_from`과 `reason`은 별도 필드로 기록하고, 없으면 null로 둔다.
 @@endif
 
 예시:
-{"ts":"2026-10-13T09:00:00+09:00","task":"T-12","round":"R1","model":"모델ID","effort":"high","result":"ok","escalated_from":null,"reason":null,"workers":null,"out":"{{DOCS}}/reports/work/T-12_v1.md","session":"세션ID","resumed":false,"tokens":{"input":0,"cached":0,"output":0},"thread_total":{"input":0,"cached":0,"output":0},"findings":null,"decided_by":"table","note":""}
+{"ts":"2026-10-13T09:00:00+09:00","kind":"codex-run","agent":"codex-lead","title":"로그인 오류 수정","duration_s":312,"task":"T-12","round":"R1","model":"모델ID","effort":"high","result":"ok","escalated_from":null,"reason":null,"workers":null,"out":"{{DOCS}}/reports/work/T-12_v1.md","session":"세션ID","resumed":false,"tokens":{"input":0,"cached":0,"output":0},"thread_total":{"input":0,"cached":0,"output":0},"findings":null,"decided_by":"table","note":""}
 
 | 필드 | 의미 |
 |---|---|
 | ts | ISO 8601 시각 |
+| kind | codex-run/claude-run/batch/native |
+| agent | 실행한 에이전트 이름. 래퍼 기본값 codex-lead·codex-reviewer·claude-worker·claude-reviewer·codex-batch, 모르면 null |
+| title | 카드 첫 줄 제목, 없으면 null |
+| duration_s | 걸린 초, 모르면 null |
 | task, round | 과제 ID와 R1/R2/R3/single |
 | model, effort | 실제 모델과 추론 강도 |
 | result | ok/fail/partial/stopped (같은 실패 3회로 멈춤) |
@@ -23,11 +28,12 @@
 | workers | 하위 일꾼 수, 모르면 null |
 | out | 산출물 경로, 실패면 null |
 | session | CLI 세션 ID, 알 수 없으면 null |
-| tokens | 이번 호출의 input/cached/output 사용량, 알 수 없으면 null |
+| tokens | 이번 호출의 input/cached/output 사용량(네이티브는 {"total": N} 가능), 알 수 없으면 null |
 | resumed | 이전 세션을 이어 썼는지 여부 |
 | thread_total | 세션의 누계 input/cached/output, 알 수 없으면 null |
 | findings | R2 판정 수 {confirmed, needs_validation, rejected}. R2 가 아니거나 모르면 null |
 | decided_by | jev/table/human |
 | note | 실패 이유 또는 특이사항 |
 
+`tandem/tools/run-table.ps1 -Task <ID>` 는 이 로그로 보고용 실행 표를 만든다(`-Since today|2h|all`, `-Max 10`). 예전 기록에 없는 칸은 —로 나온다.
 집계는 5건마다 모델별 실패와 승급, 호출 수, 토큰 사용을 확인한다. 배치표 변경은 총괄이 한다.

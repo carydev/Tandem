@@ -1,4 +1,4 @@
-﻿param([string]$Task,[ValidateSet('R1','R2','R3','single')][string]$Round='single',[string]$Card,[string]$Out,[string]$Model,[string]$Effort='low',[ValidateSet('workspace-write','read-only')][string]$Sandbox='workspace-write',[string]$DecidedBy='table',[string]$EscalatedFrom,[string]$Reason,[string]$Prompt,[switch]$NewSession,[string]$Wait,[int]$WaitSeconds=540,[string]$RunnerState)
+﻿param([string]$Task,[ValidateSet('R1','R2','R3','single')][string]$Round='single',[string]$Card,[string]$Out,[string]$Model,[string]$Effort='low',[ValidateSet('workspace-write','read-only')][string]$Sandbox='workspace-write',[string]$DecidedBy='table',[string]$EscalatedFrom,[string]$Reason,[string]$Prompt,[switch]$NewSession,[string]$Wait,[int]$WaitSeconds=540,[string]$RunnerState,[string]$Agent)
 try { [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false) } catch {}  # UTF-8 stdout: PS 5.1 defaults to the OEM code page (cp949 on Korean Windows), which garbles non-ASCII output read by Bash/Claude
 $ErrorActionPreference='Stop'
 $utf8=[Text.UTF8Encoding]::new($false)
@@ -85,7 +85,8 @@ try {
             try { $review=[string](@(& (Join-Path $PSScriptRoot 'review-check.ps1') -Review $s.out) | Select-Object -First 1) } catch { $review='' }
             if ($review -match 'confirmed=(\d+) needs_validation=(\d+) rejected=(\d+)') { $findings=@{confirmed=[int]$matches[1];needs_validation=[int]$matches[2];rejected=[int]$matches[3]} }
         }
-        $record=@{ts=[datetime]::Now.ToString('o');task=$s.task;round=$s.round;model=$s.model;effort=$s.effort;result=$result;escalated_from=$(if ($s.escalated_from) {$s.escalated_from} else {$null});reason=$(if ($s.reason) {$s.reason} else {$null});workers=$null;out=(Relative $s.out $root);session=$session;resumed=$resumed;tokens=$tokens;thread_total=$threadTotal;findings=$findings;decided_by=$s.decided_by;note=$note}
+        $duration=$null; if ($s.started) { try { $duration=[int]([datetime]::Now-[datetime]::Parse([string]$s.started,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind)).TotalSeconds } catch {} }
+        $record=@{ts=[datetime]::Now.ToString('o');kind='codex-run';agent=$(if ($s.agent) {$s.agent} else {$null});title=$(if ($s.title) {$s.title} else {$null});duration_s=$duration;task=$s.task;round=$s.round;model=$s.model;effort=$s.effort;result=$result;escalated_from=$(if ($s.escalated_from) {$s.escalated_from} else {$null});reason=$(if ($s.reason) {$s.reason} else {$null});workers=$null;out=(Relative $s.out $root);session=$session;resumed=$resumed;tokens=$tokens;thread_total=$threadTotal;findings=$findings;decided_by=$s.decided_by;note=$note}
         $log=Join-Path $s.docs 'log/runs.jsonl'; [IO.Directory]::CreateDirectory((Split-Path $log)) | Out-Null
         [IO.File]::AppendAllText($log,($record | ConvertTo-Json -Compress -Depth 8)+"`n",$utf8)
         $done=@{result=$result;exit=$exit;out_exists=$exists;summary=$summary;session=$session;resumed=$resumed;tokens=$tokens;review=$review}
@@ -135,7 +136,9 @@ try {
                 try { $entry=$line | ConvertFrom-Json; if ($entry.task -ceq $Task -and $entry.model -ieq $Model -and $entry.session) { $resumeSession=[string]$entry.session; $priorTotal=if ($entry.thread_total) {$entry.thread_total} else {$entry.tokens} } } catch {}
             }
         }
-        $s=@{id=$id;key=$safe;task=$Task;round=$Round;model=$Model;effort=$Effort;sandbox=$Sandbox;decided_by=$DecidedBy;escalated_from=$EscalatedFrom;reason=$Reason;out=$outFull;docs=$docs;prompt=$stem+'.prompt';last=$stem+'.txt';jsonl=$stem+'.jsonl';err=$stem+'.err';resume_session=$resumeSession;prior_total=$priorTotal}
+        $title=([regex]::Match($cardText,'(?m)^#\s+(.+)$')).Groups[1].Value.Trim(); if ($title.StartsWith($Task)) { $title=$title.Substring($Task.Length).TrimStart(' ',':','-',[char]0x2014,[char]0x00B7) }; if ($title.Length -gt 60) { $title=$title.Substring(0,60) }
+        $agentName=if ($Agent) {$Agent} else {$(if ($Round -eq 'R2') {'codex-reviewer'} else {'codex-lead'})}
+        $s=@{id=$id;key=$safe;task=$Task;agent=$agentName;title=$title;started=[datetime]::Now.ToString('o');round=$Round;model=$Model;effort=$Effort;sandbox=$Sandbox;decided_by=$DecidedBy;escalated_from=$EscalatedFrom;reason=$Reason;out=$outFull;docs=$docs;prompt=$stem+'.prompt';last=$stem+'.txt';jsonl=$stem+'.jsonl';err=$stem+'.err';resume_session=$resumeSession;prior_total=$priorTotal}
         [IO.File]::WriteAllText($statePath,($s | ConvertTo-Json -Compress),$utf8)
         $runner=Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Quote $PSCommandPath),'-RunnerState',(Quote $statePath)) -WorkingDirectory $root -PassThru -WindowStyle Hidden
     } finally { $mutex.ReleaseMutex(); $mutex.Dispose() }

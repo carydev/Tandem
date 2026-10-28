@@ -99,6 +99,7 @@ try {
     $usagePath=Join-Path $outPath 'usage.jsonl'; [IO.File]::WriteAllText($usagePath,'',$utf8)
     $thread=''; $threadCount=0; $threadTotal=@{input=0L;cached=0L;output=0L}; $sessions=0; $seenThreads=@{}; $streak=0; $okCount=0; $skipCount=0; $failCount=0; $progress=New-Object System.Collections.ArrayList
     $sum=@{input=0L;cached=0L;output=0L}; $stopped=$false; $stopReason=''
+    $batchWatch=[Diagnostics.Stopwatch]::StartNew()
     foreach ($item in $rows) {
         $stem=Join-Path $outPath $item.id
         $hashBytes=New-Object System.Collections.Generic.List[byte]
@@ -155,7 +156,7 @@ try {
     $docs=Join-Path $root $config.docs_root; $log=Join-Path $docs 'log/runs.jsonl'; [IO.Directory]::CreateDirectory((Split-Path $log)) | Out-Null
     $relativeOut=$outPath; $prefix=$root.TrimEnd('\','/')+'\'; if ($outPath.StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase)) { $relativeOut=$outPath.Substring($prefix.Length).Replace('\','/') }
     $note="items $($rows.Count) ok $okCount skipped $skipCount failed $failCount sessions $sessions"
-    AddJson $log @{ts=[datetime]::Now.ToString('o');task=$Name;round='single';model=$Model;effort=$Effort;result=$resultName;workers=$null;out=$relativeOut;session=$thread;tokens=$sum;decided_by=$DecidedBy;escalated_from=$(if ($EscalatedFrom) {$EscalatedFrom} else {$null});reason=$(if ($Reason) {$Reason} else {$null});note=$note}
+    AddJson $log @{ts=[datetime]::Now.ToString('o');kind='batch';agent='codex-batch';title=$null;duration_s=[int]$batchWatch.Elapsed.TotalSeconds;task=$Name;round='single';model=$Model;effort=$Effort;result=$resultName;workers=$null;out=$relativeOut;session=$thread;tokens=$sum;decided_by=$DecidedBy;escalated_from=$(if ($EscalatedFrom) {$EscalatedFrom} else {$null});reason=$(if ($Reason) {$Reason} else {$null});note=$note}
     if ($stopped) { Write-Output "STOPPED: $stopReason" }
     $progress | ForEach-Object { Write-Output $_ }
     $rate=if ($sum.input) { [Math]::Round(100.0*$sum.cached/$sum.input,1) } else { 0 }

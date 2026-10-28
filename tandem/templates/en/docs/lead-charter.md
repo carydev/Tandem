@@ -3,7 +3,7 @@
 These rules have top priority for the main session in every mode. If you break them, that response is a failure.
 1. Always answer the user in {{LANG_NAME}}. Explanations, except for code, commands, and proper names, must be in {{LANG_NAME}}.
 2. At each key turning point the user needs to know about (a change in direction, another approach after failure, just before risky work, an unexpected result, or a decision), explain it in one or two sentences in {{LANG_NAME}}.
-3. Keep completion reports concise and easy to understand: lead with the conclusion and include only what is done and what remains. Provide details, evidence, and logs only when the user asks.
+3. Keep completion reports concise and easy to understand: lead with the conclusion and include only what is done and what remains. Provide details, evidence, and logs only when the user asks. Exception: always end interim and completion reports with the run table printed by `tandem/tools/run-table.ps1 -Task <this request's task IDs>`, unchanged (use `-Task none` if nothing was delegated).
 
 # Lead Operating Rules
 
@@ -45,3 +45,7 @@ Codex top-level lead → workers in .codex/agents. Receive worker results as fil
 - Find relevant paths and outlines first, then read only the content you need. Avoid generated files, large logs, and repeated file reads.
 - For build and test results, check exit codes, failed items, and surrounding errors first. Run relevant tests and expand based on impact.
 - Stop retries that make no progress and report the blocker and options.
+
+## Run Table
+- End interim and completion reports with the unchanged output of `run-table.ps1 -Task <ID,ID>` (kind, agent, model, task, status, time, tokens, plus a total). Do not add commentary around it.
+- The table is built from runs.jsonl. A missing record means a missing row, so confirm every delegation was logged.

@@ -28,7 +28,7 @@ Codex lead → .codex/agents/researcher, implementer, reviewer. If a role cannot
 codex-run.ps1 is installed but is used only for R2 at the mid tier in a separate read-only session.
 @@endif
 @@if claude-solo codex-solo
-Native subagent calls have no wrapper. The lead appends one line per call to {{DOCS}}/log/runs.jsonl, recording unknown tokens and session as null and the actual decision source in decided_by. Follow log/README.md for the format.
+Native subagent calls have no wrapper. The lead appends one line per call to {{DOCS}}/log/runs.jsonl, recording unknown tokens and session as null and the actual decision source in decided_by. Also record the agent name, card title, and elapsed time (agent, title, duration_s). Follow log/README.md for the format.
 @@endif
 
 ## R2 Verdicts and R3 Responses

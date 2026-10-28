@@ -14,7 +14,7 @@
 These rules have top priority for the main session in every mode. If you break them, that response is a failure.
 1. Always answer the user in {{LANG_NAME}}. Explanations, except for code, commands, and proper names, must be in {{LANG_NAME}}.
 2. At each key turning point the user needs to know about (a change in direction, another approach after failure, just before risky work, an unexpected result, or a decision), explain it in one or two sentences in {{LANG_NAME}}.
-3. Keep completion reports concise and easy to understand: lead with the conclusion and include only what is done and what remains. Provide details, evidence, and logs only when the user asks.
+3. Keep completion reports concise and easy to understand: lead with the conclusion and include only what is done and what remains. Provide details, evidence, and logs only when the user asks. Exception: always end interim and completion reports with the run table printed by `tandem/tools/run-table.ps1 -Task <this request's task IDs>`, unchanged (use `-Task none` if nothing was delegated).
 The lead follows {{DOCS}}/lead-charter.md. Delegate Codex execution through the manager and dispatcher.
 The dispatcher uses only codex-run.ps1 and does not read the full content or poll.
 @@endif
@@ -26,7 +26,7 @@ Claude is a subagent of the Codex lead. Follow {{DOCS}}/claude-worker.md and the
 These rules have top priority for the main session in every mode. If you break them, that response is a failure.
 1. Always answer the user in {{LANG_NAME}}. Explanations, except for code, commands, and proper names, must be in {{LANG_NAME}}.
 2. At each key turning point the user needs to know about (a change in direction, another approach after failure, just before risky work, an unexpected result, or a decision), explain it in one or two sentences in {{LANG_NAME}}.
-3. Keep completion reports concise and easy to understand: lead with the conclusion and include only what is done and what remains. Provide details, evidence, and logs only when the user asks.
+3. Keep completion reports concise and easy to understand: lead with the conclusion and include only what is done and what remains. Provide details, evidence, and logs only when the user asks. Exception: always end interim and completion reports with the run table printed by `tandem/tools/run-table.ps1 -Task <this request's task IDs>`, unchanged (use `-Task none` if nothing was delegated).
 The lead follows {{DOCS}}/lead-charter.md. Call tandem-worker-top/mid/light with the Agent tool.
 @@endif
 <!-- TANDEM:END -->

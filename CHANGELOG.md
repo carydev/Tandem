@@ -2,6 +2,12 @@
 
 **English** | [한국어](CHANGELOG.ko.md)
 
+## v1.7 (2026-10-28)
+
+- Run table: the new `run-table.ps1 -Task <ID>` builds a kind, agent, model, task, status, time, and tokens table with a total (cache included) from `runs.jsonl`. With nothing delegated it prints a one-row "none" table. The lead always ends interim and completion reports with it (stated as an exception to concise-report rule 3).
+- `runs.jsonl` gains `kind`, `agent`, `title`, and `duration_s`. codex-run, claude-run, and batch-run record them automatically (`-Agent` sets the name); the lead logs them for native subagent calls. A card's first line is `# <ID> <one-line title>`. Older records and the `tokens: {"total": N}` form are still read. Unknown Codex subagent tokens are filled from the Codex session file by session.
+- Upgrade: rerun the installer. It adds `tandem/tools/run-table.ps1` and updates the CLAUDE.md and AGENTS.md blocks, the lead-charter, delegation, log, and tasks docs, and the three wrappers.
+
 ## v1.6 (2026-10-27)
 
 - R2 verdict schema: one line per finding, `F1 [confirmed|needs_validation|rejected]`. confirmed requires evidence and severity, needs_validation names the unverified fact without a severity, rejected gives the reason. The new `review-check.ps1` validates the format and missing R3 answers (`fixed|disputed|deferred`); wrappers run it after R2, add a `review=` line to the summary, and record `findings` in `runs.jsonl`. The finder never verifies (finder/verifier separation borrowed from cloudflare/security-audit-skill).

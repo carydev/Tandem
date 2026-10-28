@@ -1,6 +1,7 @@
 # Task Cards
 
 Follow the project's existing task ID format. If there is no existing format, choose one during adaptation.
+The first line of a card is `# <ID> <one-line title>`. The wrapper logs that title as `title` in runs.jsonl (the "Task" column of the run table).
 Each card states the goal, confirmed background, write scope, output path, model and effort, reference paths, and verifiable completion criteria.
 Before writing a card, run `tandem/tools/lessons.ps1 -Tags <tag,tag>` and add its lines (at most three) to the background (lessons/README.md).
 @@if claude-main
