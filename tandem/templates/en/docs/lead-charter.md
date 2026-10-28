@@ -48,4 +48,5 @@ Codex top-level lead → workers in .codex/agents. Receive worker results as fil
 
 ## Run Table
 - End interim and completion reports with the unchanged output of `run-table.ps1 -Task <ID,ID>` (kind, agent, model, task, status, time, tokens, plus a total). Do not add commentary around it.
+- Command: `powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/run-table.ps1 -Task <ID,ID>` (matches the allowlist form).
 - The table is built from runs.jsonl. A missing record means a missing row, so confirm every delegation was logged.

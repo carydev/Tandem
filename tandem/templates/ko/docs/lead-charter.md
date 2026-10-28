@@ -48,4 +48,5 @@ Codex 상위 총괄 → .codex/agents의 하위 일꾼으로 위임한다. 하�
 
 ## 실행 표
 - 중간·완료 보고 끝에 `run-table.ps1 -Task <ID,ID>` 출력(종류·에이전트·모델·맡긴 작업·상태·시간·토큰과 합계)을 고치지 않고 붙인다. 표 밖 설명은 덧붙이지 않는다.
+- 실행 명령: `powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/run-table.ps1 -Task <ID,ID>` (허용 목록과 같은 형태).
 - 표는 runs.jsonl에서 만든다. 기록이 빠지면 표도 빠지므로 위임 1회마다 기록이 남았는지 확인한다.
