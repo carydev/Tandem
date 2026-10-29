@@ -2,6 +2,13 @@
 
 **English** | [한국어](CHANGELOG.ko.md)
 
+## v1.8 (2026-10-29)
+
+- Kanban board: `docs/tandem/board/index.html` reloads `board-data.js` from the same folder every 3 seconds and shows To do, In progress, Built, Review, Test, Done, and Blocked. Double-click to open; no server needed. Cards show the agent, model, run count, time, and tokens (from runs.jsonl).
+- New tool `board.ps1 add|move|note|remove|list|sync|open`. It writes `board.json` and `board-data.js` atomically under a lock.
+- Who moves what: the agent that did the work moves only to Built; review verdicts, Test, Done, and Blocked belong to the lead (the manager in claude-main). codex-run and claude-run move cards to In progress at start (Review for R2), Built on success, and Blocked on STOPPED, and write the R2 verdict line into the note. Solo-mode workers (tandem-worker-*, implementer, researcher) move their card to Built when they finish.
+- Upgrade: rerun the installer. It adds `tandem/tools/board.ps1` and `docs/tandem/board/index.html` and updates the two wrappers, the worker and manager agents, and the delegation, lead-charter, and tasks docs.
+
 ## v1.7 (2026-10-28)
 
 - Run table: the new `run-table.ps1 -Task <ID>` builds a kind, agent, model, task, status, time, and tokens table with a total (cache included) from `runs.jsonl`. With nothing delegated it prints a one-row "none" table. The lead always ends interim and completion reports with it (stated as an exception to concise-report rule 3).

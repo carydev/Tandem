@@ -21,4 +21,7 @@ Find relevant paths and the table of contents first, then read only the sections
 Do not reread the same file without a reason. For builds and tests, check the exit code and nearby errors first.
 Run only relevant tests, then broaden them according to the impact. Avoid long plans and automatically assigning many workers.
 If retries repeatedly make no progress, stop and report the cause and where you are blocked. Stop after the same failure 3 times and record the blocker in the deliverable. Start the first line of the final message (summary) with `STOPPED: <one-line cause>`.
+@@if codex-solo
+When the completion checks pass, run `powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/board.ps1 move -Task <ID> -To built -By implementer` as the last step. Do not move the card to any other column, and do not move it when STOPPED.
+@@endif
 """

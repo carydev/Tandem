@@ -41,3 +41,18 @@ R2 는 지적마다 번호(F1, F2…)와 판정 하나를 쓴다. `confirmed` �
 needs_validation 은 발견자가 아닌 쪽이 사실을 확인한다. 총괄이 직접 확인하거나 확인 과제를 따로 준다. 확인되면 confirmed, 아니면 rejected 로 총괄이 판정한다.
 R3 는 confirmed 와 needs_validation 마다 한 줄로 답한다: `- F1 fixed|disputed|deferred <한 줄>`. `review-check.ps1 -Review <R2> -Response <R3>` 가 빠진 ID 를 알린다.
 confirmed 높음 이 fixed 가 아니면 반려한다. disputed 는 총괄이 판정하고, 3라운드 뒤에도 남은 것은 쟁점으로 기록한다.
+
+## 칸반 보드
+
+{{DOCS}}/board/index.html 을 브라우저로 열면 3초마다 갱신되는 보드가 보인다(`board.ps1 open`). 데이터는 같은 폴더의 board.json 이며 board.ps1 만 고친다.
+칸: todo 할 일 → doing 진행중 → built 작업완료 → review 리뷰 → test 테스트 → done 완료, 그리고 blocked 막힘.
+- 총괄: G1 뒤 `add`, 테스트 시작 `test`, 합격 `done`, STOPPED 나 진전 없음 `blocked`.
+- 작업한 에이전트는 built 까지만 옮긴다. 리뷰·테스트·완료는 스스로 옮기지 않는다(발견자≠검증자).
+@@if claude-main codex-main
+- 래퍼가 호출 시작에 doing(R2 는 review), 성공하면 built, STOPPED 면 blocked 로 옮기고 R2 판정 줄을 카드 메모에 남긴다.
+@@endif
+@@if claude-solo codex-solo
+- 총괄이 위임할 때 doing, R2 를 시작할 때 review 로 옮긴다. 하위 일꾼은 끝날 때 built 로 옮긴다. 못 옮겼으면 총괄이 옮긴다.
+@@endif
+- 완료 보고 전 `board.ps1 list -Task <ID>` 로 카드 칸이 실제 상태와 맞는지 확인한다.
+명령: `powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/board.ps1 add|move|note|remove|list|sync|open -Task <ID[,ID]> [-To <칸>] [-By <이름>] [-Note <한 줄>]`

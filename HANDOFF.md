@@ -27,7 +27,7 @@ tandem/
   files.json                 파일 계약: 무엇을 어느 모드에 어디로 놓는가
   templates/ko/, en/         언어별 템플릿 (상대 경로 구조 동일)
     claude/ codex/ docs/ blocks/ settings.json adapt.md
-  tools/*.ps1                설치 대상에 그대로 복사되는 도구 (check, token-report, jev, manifest, diff, review-check, lessons, run-table, batch-run, codex-run, claude-run)
+  tools/*.ps1                설치 대상에 그대로 복사되는 도구 (check, token-report, jev, manifest, diff, review-check, lessons, run-table, board, batch-run, codex-run, claude-run)
 docs/plan-plugin-distribution.md  보류된 플러그인 배포 계획
 docs/design-v1.1.md          v1.1 설계서 (모드, 렌더링, 지문 업데이트, 훅, Jev, 리포트, 래퍼)
 README.md / README.ko.md     사용자 문서 (영어 기본 / 한국어). 함께 고친다
@@ -76,6 +76,7 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 | 설치기 `-Plan` 은 아무것도 안 쓰고(환경변수 포함) `-Yes` 를 함의. `-Clean` 은 현재 모드에 없는 TANDEM 경로(files.json 전 모드 dst 중 현재 모드 미포함, 또는 manifest 지문 불일치)를 `tandem/.backup/<시각>/` 로 복사 후 제거. 기본은 경고만 | 사용자 결정(2026-10-27). 2026-10-19 manga-trans 전환 때 옛 모드 파일 5개가 말없이 남았다. ai-memory 의 `--plan` 미리보기·"내가 설치한 것만, 백업 남기고" 방식. 자동 삭제는 하지 않는다 - 사용자 파일일 수 있다 |
 | 교훈 줄 끝 `(xN)` 횟수, `lessons.ps1 -Tags` 가 횟수순 최대 3줄. `(x3)` 승격. 세션 시작 로드는 여전히 안 함. 훅 알림 800자 상한(`hook.max_chars`/`TANDEM_HOOK_MAX_CHARS`), `TANDEM_HOOK_OFF=1`·`hook.enabled=false` 끄기 | 사용자 결정(2026-10-27). ECC 의 주입 상한·훅 스위치, ai-memory 의 사용 빈도 점수를 가져오되 "상시 로드 안 함" 결정(2026-10-14)은 유지. 횟수가 있어야 40줄 규칙의 "3회 반복" 을 셀 수 있다 |
 | **보고 끝 실행 표는 runs.jsonl 에서 `run-table.ps1` 로만 만든다**. 규칙 3(간결 보고)에 예외로 명시해 매 중간·완료 보고에 붙임(위임 없으면 "없음" 표). 총괄·팀장·전달책 자신의 사용량은 표에 넣지 않음(토큰 리포트 몫) | 사용자 요청(2026-10-28, 보고표 이미지 제시). 모델이 표를 직접 쓰면 숫자를 지어내고, 예외를 명시하지 않으면 간결 규칙 때문에 표를 뺀다. 메인 세션 트랜스크립트 병합은 비용 대비 이득이 작아 보류 |
+| **칸반 보드는 정적 HTML + `board-data.js`(JSONP 식) 폴링**, 데이터는 `board.ps1` 만 쓴다(잠금·원자적 쓰기). 작업한 에이전트는 built 까지만, review 판정·test·done·blocked 는 총괄/팀장. 래퍼 모드는 래퍼가 doing·built·review·blocked 자동 | 사용자 요청(2026-10-29). file:// 페이지는 fetch 로 JSON 을 못 읽어 script 재삽입을 씀(서버 불필요). 에이전트가 자기 카드를 완료로 옮기면 자기 판정이 되어 v1.6 발견자≠검증자와 충돌. 래퍼 자동 이동은 에이전트가 잊어도 보드가 어긋나지 않게 하는 안전장치 |
 
 ## 검증된 것 (v1.1, 2026-10-13, Windows PowerShell 5.1.19041)
 
@@ -132,6 +133,15 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - 변경 PowerShell 4개 파서 통과. claude-run·batch-run 의 새 필드는 실제 호출로 미확인(codex-run 과 같은 코드 경로)
 - Codex 하위 에이전트도 자기 rollout 파일(`session_meta.source.subagent.thread_spawn.parent_thread_id`)을 남김을 확인 - session 으로 토큰 채우기 가능. 총괄이 하위 스레드 ID 를 실제로 기록하는지는 미확인
 - 배포 검증: 태그 `v1.7` + GitHub Releases, 실제 URL 한 줄 설치(claude-solo, ko) 성공 - version 1.7, 도구 9개에 run-table 포함, `-Task none` 빈 표 출력. manga-trans 설치본은 v1.5 그대로 - 업그레이드는 사용자 결정
+
+## 검증된 것 (v1.8, 2026-10-29)
+
+- 설치 8조합 성공, 잔존 토큰 0, `board.ps1`·`board/index.html` 배치
+- `board.ps1`: add(카드 제목 추출)·move(별칭 stopped→blocked 등)·note·list 필터·잘못된 칸 거부. 프로세스 8개 동시 add 후 카드 13장·rev 14 로 유실 없음
+- 실제 호출: `codex-run.ps1 -Round R1`(gpt-5.6-luna low) → 카드 doing → built 자동 이동, 통계 실행 1회·18s·49k
+- 화면: 헤드리스 Edge 캡처로 7칸·카드 메타·막힘 강조 렌더링 확인 (file:// 에서 board-data.js 폴링 동작)
+- PS 5.1 함정 2건 수정: `[ordered]@{}` 안 `$(if ..)` 값이 "Argument types do not match", `@(List[object])` 도 같은 오류 → `.ToArray()`·루프로. `[IO.File]::Replace` 세 번째 인수 `$null` 은 "" 로 넘어가 실패 → `[NullString]::Value`
+- solo 모드 하위 일꾼이 실제로 built 로 옮기는지는 미확인 (규칙만 추가)
 
 ## 검증 안 된 것 (남은 일)
 
@@ -196,6 +206,7 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - [x] **v1.6** (2026-10-27): 깃허브 트렌딩 조사(사용자 요청)에서 고른 3건 반영 - R2 판정 스키마 + `review-check.ps1` + 래퍼 자동 검사·`findings`, 설치기 `-Plan`/`-Clean` + 잔존 파일 경고 + `tandem/.backup/`, 교훈 `(xN)` + `lessons.ps1`, 훅 알림 상한·끄기 스위치(`config.hook`)
       - Codex 카드 없이 Claude 가 직접 구현 (설치기·템플릿 ko/en·도구가 얽혀 있어 위임 비용이 더 컸다). 검토한 저장소: cloudflare/security-audit-skill, akitaonrails/ai-memory, affaan-m/ECC (ruflo 예산 상한·openbot 한도 리셋 표시는 보류)
 - [x] **v1.7** (2026-10-28): 보고 끝 실행 표 - `run-table.ps1`, runs.jsonl `kind`·`agent`·`title`·`duration_s`, 규칙 3 예외로 보고마다 표 첨부, 카드 첫 줄 `# <ID> <제목>`
+- [x] **v1.8** (2026-10-29): 칸반 보드 - `board.ps1`, `docs/tandem/board/index.html`(3초 폴링), 래퍼 자동 이동, 에이전트는 built 까지만·판정 칸은 총괄/팀장
 - [ ] **보류** 플러그인 방식 배포 (Claude `/plugin`, Codex `codex plugin`) - 한 줄 설치는 공식 마켓플레이스 심사가 필요해 보류. 계획: `docs/plan-plugin-distribution.md`
 
 ## 지키면 좋을 것

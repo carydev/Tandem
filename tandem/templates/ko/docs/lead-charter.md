@@ -46,6 +46,10 @@ Codex 상위 총괄 → .codex/agents의 하위 일꾼으로 위임한다. 하�
 - 빌드·테스트 결과는 종료 코드, 실패 항목, 오류 주변부터 확인한다. 관련 테스트만 실행하고 영향에 따라 넓힌다.
 - 진전 없는 재시도는 멈추고 막힌 이유와 선택지를 보고한다.
 
+## 보드
+- 과제 진행은 {{DOCS}}/board/ 칸반 보드에 그때그때 반영한다. 누가 어느 칸으로 옮기는지는 delegation.md 의 칸반 보드 절을 따른다.
+- 사용자가 보드를 보고 싶어 하면 `powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/board.ps1 open` 을 실행하거나 {{DOCS}}/board/index.html 경로를 알려 준다.
+
 ## 실행 표
 - 중간·완료 보고 끝에 `run-table.ps1 -Task <ID,ID>` 출력(종류·에이전트·모델·맡긴 작업·상태·시간·토큰과 합계)을 고치지 않고 붙인다. 표 밖 설명은 덧붙이지 않는다.
 - 실행 명령: `powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/run-table.ps1 -Task <ID,ID>` (허용 목록과 같은 형태).

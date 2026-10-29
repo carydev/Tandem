@@ -41,3 +41,18 @@ After an R2 call, the wrapper runs the same check, adds a `review=` line to the 
 Someone other than the finder verifies needs_validation items: the lead checks directly or assigns a separate verification task. The lead then rules confirmed or rejected.
 R3 answers every confirmed and needs_validation item in one line: `- F1 fixed|disputed|deferred <one line>`. `review-check.ps1 -Review <R2> -Response <R3>` reports missing IDs.
 Reject the work if a confirmed high finding is not fixed. The lead rules on disputed items; anything still open after three rounds is recorded as an open issue.
+
+## Kanban Board
+
+Open {{DOCS}}/board/index.html in a browser for a board that refreshes every 3 seconds (`board.ps1 open`). Its data is board.json in the same folder; only board.ps1 edits it.
+Columns: todo → doing → built → review → test → done, plus blocked.
+- Lead: `add` after G1, `test` when testing starts, `done` on acceptance, `blocked` on STOPPED or no progress.
+- The agent that did the work moves its card only as far as built. It never moves its own card to review, test, or done (finder is not verifier).
+@@if claude-main codex-main
+- The wrapper moves the card to doing when a call starts (review for R2), to built on success, and to blocked on STOPPED, and writes the R2 verdict line into the card note.
+@@endif
+@@if claude-solo codex-solo
+- The lead moves the card to doing when delegating and to review when R2 starts. The worker moves it to built when it finishes; if it could not, the lead does.
+@@endif
+- Before a completion report, run `board.ps1 list -Task <ID>` and confirm the columns match reality.
+Command: `powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/board.ps1 add|move|note|remove|list|sync|open -Task <ID[,ID]> [-To <column>] [-By <name>] [-Note <one line>]`

@@ -19,3 +19,4 @@ tandem-dispatch에 카드 경로, 출력 경로, 모델, 강도, 라운드를 �
 같은 파일을 이유 없이 다시 읽지 않는다. 빌드·테스트 출력은 종료 코드, 실패 항목, 오류 주변을 우선 본다.
 관련 테스트만 돌리고 영향에 따라 넓힌다. 긴 계획과 무조건적 다수 일꾼 편성을 피한다.
 진전 없는 재시도가 반복되면 멈추고 원인과 막힌 지점을 보고한다.
+보드 카드는 판정할 때 옮긴다: 테스트 시작 `test`, 합격 `done`, 막힘 `blocked` (`powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/board.ps1 move -Task <ID> -To <칸> -By tandem-manager`). 진행중·작업완료·리뷰는 래퍼가 옮긴다.

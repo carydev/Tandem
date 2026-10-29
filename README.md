@@ -71,6 +71,12 @@ An R2 review writes one verdict line per finding: `F1 [confirmed|needs_validatio
 `tandem/tools/review-check.ps1` checks the format and missing R3 answers (`F1 fixed|disputed|deferred`). After an R2 call the wrapper runs it automatically, adds a `review=` line to the summary, and records the counts in `runs.jsonl`.
 The finder does not verify: the lead checks needs_validation items directly or through a separate task, then rules confirmed or rejected.
 
+### Kanban board
+
+Open `docs/tandem/board/index.html` in a browser to watch task cards move through To do → In progress → Built → Review → Test → Done (plus Blocked), refreshed every 3 seconds. Cards show the agent, model, run count, time, and tokens. Viewing costs no tokens.
+The data is `board.json` in the same folder, edited only by `tandem/tools/board.ps1` (`add`, `move`, `note`, `remove`, `list`, `sync`, `open`). A file lock keeps concurrent wrapper writes safe.
+The agent that did the work moves its card only as far as Built; Review, Test, Done, and Blocked are moved by the lead (the manager in claude-main) when ruling. In wrapper modes the wrapper moves In progress, Built, Review, and Blocked automatically.
+
 ### Run table
 
 The lead ends interim and completion reports with a table of the subagents used for the task. `tandem/tools/run-table.ps1 -Task <ID,ID>` builds it from `runs.jsonl`.
@@ -95,6 +101,7 @@ With nothing delegated, `-Task none` prints a one-row "none" table. Wrappers rec
 | Review check | Verify the R2 verdict format and missing R3 answers mechanically |
 | Failure lessons | One-line lessons with an `(xN)` count; `lessons.ps1` returns the top three when writing a card |
 | Run table | Agent, model, task, status, time, and tokens at the end of each report (`run-table.ps1`) |
+| Kanban board | Live task board in the browser (`board.ps1`, `board/index.html`) |
 | Operating docs | Keep roles, ownership, routing, and status in one place |
 
 ### Working rules
@@ -166,7 +173,7 @@ On update, unchanged TANDEM-owned files are replaced automatically. User-edited 
 
 | Scope | Files |
 |---|---|
-| All modes | `docs/tandem/` (or `-DocsRoot`), `tandem/adapt.md`, `tandem/config.json`, `tandem/manifest.json`, shared scripts in `tandem/tools/` (check, token report, Jev, manifest, diff, review check, lessons, run table, batch run) |
+| All modes | `docs/tandem/` (or `-DocsRoot`), `tandem/adapt.md`, `tandem/config.json`, `tandem/manifest.json`, shared scripts in `tandem/tools/` (check, token report, Jev, manifest, diff, review check, lessons, run table, kanban board, batch run) |
 | `claude-main` | Claude manager, dispatcher, critic, and commands; Codex work lead and agents; Claude settings and project instruction blocks |
 | `codex-main` | Codex configuration and hook; Claude worker doc and settings; `tandem/tools/claude-run.ps1` |
 | `claude-solo` | Claude lead, critic, top/mid/light agents and commands; Claude settings |

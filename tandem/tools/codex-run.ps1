@@ -89,6 +89,16 @@ try {
         $record=@{ts=[datetime]::Now.ToString('o');kind='codex-run';agent=$(if ($s.agent) {$s.agent} else {$null});title=$(if ($s.title) {$s.title} else {$null});duration_s=$duration;task=$s.task;round=$s.round;model=$s.model;effort=$s.effort;result=$result;escalated_from=$(if ($s.escalated_from) {$s.escalated_from} else {$null});reason=$(if ($s.reason) {$s.reason} else {$null});workers=$null;out=(Relative $s.out $root);session=$session;resumed=$resumed;tokens=$tokens;thread_total=$threadTotal;findings=$findings;decided_by=$s.decided_by;note=$note}
         $log=Join-Path $s.docs 'log/runs.jsonl'; [IO.Directory]::CreateDirectory((Split-Path $log)) | Out-Null
         [IO.File]::AppendAllText($log,($record | ConvertTo-Json -Compress -Depth 8)+"`n",$utf8)
+        $boardTool=Join-Path $PSScriptRoot 'board.ps1'
+        if (Test-Path -LiteralPath $boardTool) {
+            # Wrapper moves only doing/built/blocked; review verdicts, test and done stay with the lead.
+            try {
+                if ($result -eq 'stopped') { & $boardTool move -Task $s.task -To blocked -By $s.agent -Note (@($lines)[0]) -Quiet | Out-Null }
+                elseif ($result -eq 'ok' -and $s.round -ne 'R2') { & $boardTool move -Task $s.task -To built -By $s.agent -Note '' -Quiet | Out-Null }
+                elseif ($result -eq 'ok') { & $boardTool note -Task $s.task -Note $review -Quiet | Out-Null }
+                else { & $boardTool note -Task $s.task -Note ('fail: '+$note) -Quiet | Out-Null }
+            } catch {}
+        }
         $done=@{result=$result;exit=$exit;out_exists=$exists;summary=$summary;session=$session;resumed=$resumed;tokens=$tokens;review=$review}
         [IO.File]::WriteAllText($RunnerState+'.done.json',($done | ConvertTo-Json -Compress -Depth 8),$utf8)
         exit 0
@@ -140,6 +150,8 @@ try {
         $agentName=if ($Agent) {$Agent} else {$(if ($Round -eq 'R2') {'codex-reviewer'} else {'codex-lead'})}
         $s=@{id=$id;key=$safe;task=$Task;agent=$agentName;title=$title;started=[datetime]::Now.ToString('o');round=$Round;model=$Model;effort=$Effort;sandbox=$Sandbox;decided_by=$DecidedBy;escalated_from=$EscalatedFrom;reason=$Reason;out=$outFull;docs=$docs;prompt=$stem+'.prompt';last=$stem+'.txt';jsonl=$stem+'.jsonl';err=$stem+'.err';resume_session=$resumeSession;prior_total=$priorTotal}
         [IO.File]::WriteAllText($statePath,($s | ConvertTo-Json -Compress),$utf8)
+        $boardTool=Join-Path $PSScriptRoot 'board.ps1'
+        if (Test-Path -LiteralPath $boardTool) { try { & $boardTool move -Task $Task -To $(if ($Round -eq 'R2') {'review'} else {'doing'}) -By $agentName -Title $title -Quiet | Out-Null } catch {} }
         $runner=Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Quote $PSCommandPath),'-RunnerState',(Quote $statePath)) -WorkingDirectory $root -PassThru -WindowStyle Hidden
     } finally { $mutex.ReleaseMutex(); $mutex.Dispose() }
     WaitDone $statePath $WaitSeconds

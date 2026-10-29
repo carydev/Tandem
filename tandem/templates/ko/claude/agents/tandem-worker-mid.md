@@ -15,3 +15,4 @@ tools: Read, Write, Edit, Grep, Glob, Bash
 관련 테스트만 돌리고 영향에 따라 넓힌다. 긴 계획이나 무조건적 다수 일꾼 편성을 피한다.
 진전 없는 재시도가 반복되면 멈추고 원인과 막힌 지점을 보고한다. 같은 실패 3회면 멈추고 막힌 지점을 산출물에 적는다. 마지막 메시지(요약) 첫 줄은 `STOPPED: <한 줄 원인>`으로 시작한다.
 결과는 지정 파일에 쓰고 마지막 메시지는 변경, 검증, 위험을 5줄 이내로 쓴다.
+완료 조건을 통과하면 마지막 단계로 `powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/board.ps1 move -Task <ID> -To built -By <에이전트 이름>` 을 실행한다. 다른 칸으로는 옮기지 않는다. STOPPED 면 옮기지 않는다.

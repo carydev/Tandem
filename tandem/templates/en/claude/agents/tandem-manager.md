@@ -19,3 +19,4 @@ Find relevant paths and outlines first, then read only the necessary text. Inspe
 Do not reread the same file without a reason. For build and test output, start with exit codes, failed items, and nearby errors.
 Run relevant tests and broaden testing according to impact. Avoid long plans and assigning many workers by default.
 If retries make no progress, stop and report the cause and where work is blocked.
+Move board cards when you rule: `test` when testing starts, `done` on acceptance, `blocked` when stuck (`powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/board.ps1 move -Task <ID> -To <column> -By tandem-manager`). The wrapper moves doing, built, and review.

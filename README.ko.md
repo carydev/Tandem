@@ -71,6 +71,12 @@ R2 검토는 지적마다 `F1 [confirmed|needs_validation|rejected]` 판정 줄�
 `tandem/tools/review-check.ps1` 이 형식과 R3 응답(`F1 fixed|disputed|deferred`) 누락을 검사한다. 래퍼는 R2 뒤 자동으로 돌려 요약에 `review=` 줄을 붙이고 `runs.jsonl` 에 판정 수를 남긴다.
 발견자는 검증하지 않는다. needs_validation 은 총괄이 직접 확인하거나 별도 과제로 확인한 뒤 confirmed 또는 rejected 로 판정한다.
 
+### 칸반 보드
+
+`docs/tandem/board/index.html` 을 브라우저로 열면 과제 카드가 할 일 → 진행중 → 작업완료 → 리뷰 → 테스트 → 완료(그리고 막힘) 칸을 오가는 모습이 3초마다 갱신된다. 카드에는 에이전트, 모델, 실행 횟수, 시간, 토큰이 붙는다. 보는 데는 토큰이 들지 않는다.
+데이터는 같은 폴더의 `board.json` 이고 `tandem/tools/board.ps1` 만 고친다(`add`, `move`, `note`, `remove`, `list`, `sync`, `open`). 파일 잠금이 있어 여러 래퍼가 동시에 써도 깨지지 않는다.
+작업한 에이전트는 작업완료까지만 옮기고, 리뷰·테스트·완료·막힘은 총괄(claude-main 은 팀장)이 판정할 때 옮긴다. 래퍼가 있는 모드에서는 래퍼가 진행중·작업완료·리뷰·막힘을 자동으로 옮긴다.
+
 ### 실행 표
 
 총괄은 중간·완료 보고 끝에 이번 과제에서 쓴 하위 에이전트 표를 붙인다. `tandem/tools/run-table.ps1 -Task <ID,ID>` 가 `runs.jsonl` 로 만든다.
@@ -95,6 +101,7 @@ R2 검토는 지적마다 `F1 [confirmed|needs_validation|rejected]` 판정 줄�
 | 검토 판정 검사 | R2 판정 형식과 R3 응답 누락을 기계적으로 확인 |
 | 실패 교훈 | 한 줄 교훈에 `(xN)` 횟수, 카드 쓸 때 `lessons.ps1` 로 상위 3줄만 |
 | 실행 표 | 보고 끝에 에이전트·모델·작업·상태·시간·토큰 표 (`run-table.ps1`) |
+| 칸반 보드 | 브라우저에서 보는 실시간 과제 보드 (`board.ps1`, `board/index.html`) |
 | 운영 문서 | 역할, 소유권, 모델 배치, 현황 관리 |
 
 ### 작업 규칙
@@ -166,7 +173,7 @@ Claude 총괄 세션에서는 `/tandem-tokens`, PowerShell에서는 `tandem/tool
 
 | 범위 | 파일 |
 |---|---|
-| 모든 모드 | `docs/tandem/` (`-DocsRoot`로 변경 가능), `tandem/adapt.md`, `tandem/config.json`, `tandem/manifest.json`, `tandem/tools/`의 공통 스크립트 (점검, 토큰 리포트, Jev, 지문, 변경분, 검토 판정 검사, 교훈 조회, 실행 표, 배치 실행) |
+| 모든 모드 | `docs/tandem/` (`-DocsRoot`로 변경 가능), `tandem/adapt.md`, `tandem/config.json`, `tandem/manifest.json`, `tandem/tools/`의 공통 스크립트 (점검, 토큰 리포트, Jev, 지문, 변경분, 검토 판정 검사, 교훈 조회, 실행 표, 칸반 보드, 배치 실행) |
 | `claude-main` | Claude 팀장·전달책·검수자와 명령, Codex 실무 리드와 에이전트, Claude 설정과 프로젝트 지시 블록 |
 | `codex-main` | Codex 설정과 훅, Claude 일꾼 문서와 설정, `tandem/tools/claude-run.ps1` |
 | `claude-solo` | Claude 총괄·검수자·상중하 일꾼과 명령, Claude 설정 |

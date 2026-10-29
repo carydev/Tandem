@@ -46,6 +46,10 @@ Codex top-level lead → workers in .codex/agents. Receive worker results as fil
 - For build and test results, check exit codes, failed items, and surrounding errors first. Run relevant tests and expand based on impact.
 - Stop retries that make no progress and report the blocker and options.
 
+## Board
+- Keep the {{DOCS}}/board/ kanban board current as tasks move. Who moves which column follows the Kanban Board section of delegation.md.
+- If the user wants to see the board, run `powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/board.ps1 open` or give them the {{DOCS}}/board/index.html path.
+
 ## Run Table
 - End interim and completion reports with the unchanged output of `run-table.ps1 -Task <ID,ID>` (kind, agent, model, task, status, time, tokens, plus a total). Do not add commentary around it.
 - Command: `powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/run-table.ps1 -Task <ID,ID>` (matches the allowlist form).

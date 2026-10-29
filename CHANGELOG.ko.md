@@ -2,6 +2,13 @@
 
 [English](CHANGELOG.md) | **한국어**
 
+## v1.8 (2026-10-29)
+
+- 칸반 보드: `docs/tandem/board/index.html` 이 같은 폴더의 `board-data.js` 를 3초마다 다시 읽어 할 일·진행중·작업완료·리뷰·테스트·완료·막힘 칸을 보여 준다. 파일을 더블클릭해서 열면 되고 서버가 필요 없다. 카드에 에이전트·모델·실행 횟수·시간·토큰(runs.jsonl 집계)이 붙는다.
+- 새 도구 `board.ps1 add|move|note|remove|list|sync|open`. `board.json` 과 `board-data.js` 를 잠금 아래 원자적으로 쓴다.
+- 이동 권한: 작업한 에이전트는 작업완료까지만, 리뷰 판정·테스트·완료·막힘은 총괄(claude-main 은 팀장). codex-run·claude-run 은 시작 때 진행중(R2 는 리뷰), 성공하면 작업완료, STOPPED 면 막힘으로 옮기고 R2 판정 줄을 메모에 남긴다. solo 모드 하위 일꾼(tandem-worker-*, implementer, researcher)은 끝날 때 작업완료로 옮긴다.
+- 업그레이드: 설치기를 다시 실행한다. `tandem/tools/board.ps1` 과 `docs/tandem/board/index.html` 이 추가되고 래퍼 2종, 일꾼·팀장 에이전트, delegation·lead-charter·tasks 문서가 바뀐다.
+
 ## v1.7 (2026-10-28)
 
 - 실행 표: 새 도구 `run-table.ps1 -Task <ID>` 가 `runs.jsonl` 로 종류·에이전트·모델·맡긴 작업·상태·시간·토큰 표와 합계(캐시 포함)를 만든다. 위임이 없으면 "없음" 한 줄 표. 총괄은 중간·완료 보고 끝에 이 표를 항상 붙인다(간결 보고 규칙 3의 예외로 명시).
