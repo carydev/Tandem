@@ -142,6 +142,7 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - 화면: 헤드리스 Edge 캡처로 7칸·카드 메타·막힘 강조 렌더링 확인 (file:// 에서 board-data.js 폴링 동작)
 - PS 5.1 함정 2건 수정: `[ordered]@{}` 안 `$(if ..)` 값이 "Argument types do not match", `@(List[object])` 도 같은 오류 → `.ToArray()`·루프로. `[IO.File]::Replace` 세 번째 인수 `$null` 은 "" 로 넘어가 실패 → `[NullString]::Value`
 - solo 모드 하위 일꾼이 실제로 built 로 옮기는지는 미확인 (규칙만 추가)
+- 배포 검증: 태그 `v1.8` + GitHub Releases, 실제 URL 한 줄 설치(codex-solo, ko) 성공 - version 1.8, `board.ps1`·`docs/tandem/board/index.html` 배치, `board.ps1 add` 동작. manga-trans 설치본은 v1.5 그대로
 
 ## 검증 안 된 것 (남은 일)
 
