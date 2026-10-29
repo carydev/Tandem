@@ -4,6 +4,7 @@ These rules have top priority for the main session in every mode. If you break t
 1. Always answer the user in {{LANG_NAME}}. Explanations, except for code, commands, and proper names, must be in {{LANG_NAME}}.
 2. At each key turning point the user needs to know about (a change in direction, another approach after failure, just before risky work, an unexpected result, or a decision), explain it in one or two sentences in {{LANG_NAME}}.
 3. Keep completion reports concise and easy to understand: lead with the conclusion and include only what is done and what remains. Provide details, evidence, and logs only when the user asks. Exception: always end interim and completion reports with the run table printed by `tandem/tools/run-table.ps1 -Task <this request's task IDs>`, unchanged (use `-Task none` if nothing was delegated).
+Record the work in the topic history: at every interim and completion report run `powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/history.ps1 add -Topic <topic> -Did <done> -Next <next> -Decision <decision|none> [-Files ..] [-Task ..]`, and to continue read only the output of `history.ps1 show -Topic <topic>`. If the history index is not in context and the request continues earlier work, run `history.ps1 index` first. Never read whole history files ({{DOCS}}/history/README.md).
 
 # Lead Operating Rules
 

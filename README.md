@@ -71,6 +71,16 @@ An R2 review writes one verdict line per finding: `F1 [confirmed|needs_validatio
 `tandem/tools/review-check.ps1` checks the format and missing R3 answers (`F1 fixed|disputed|deferred`). After an R2 call the wrapper runs it automatically, adds a `review=` line to the summary, and records the counts in `runs.jsonl`.
 The finder does not verify: the lead checks needs_validation items directly or through a separate task, then rules confirmed or rejected.
 
+### Work history and resuming
+
+Each topic (login, payments, and so on) keeps numbered entries in `docs/tandem/history/<topic>.md`. At every interim and completion report the lead records one entry (done, decisions, files, next step) with `history.ps1 add`; wrappers attach run results for linked tasks automatically.
+At session start, after `/clear`, and after compaction a hook injects the topic index (`INDEX.md`, at most 1,500 characters). For a request like "continue login" the lead runs `history.ps1 show -Topic login` and reads only the summary card and latest entries. Files changed since the entry, uncommitted changes, and other topics that touched the same files are flagged with `Note:`.
+Reading cost stays flat as history grows: when a topic file passes 20 entries the oldest move to `archive/`, topics idle for 30 days fold in the index, and older details are found by number with `history.ps1 search <words>`. A new topic whose name is close to an existing one (login / login-page) is stopped before it is written.
+
+### Output trimming
+
+Run commands with long output (build, test, install) through `tandem/tools/quiet.ps1 -Command "<command>"`. The full output stays in a log under `tandem/.cache/quiet/`; only the exit code, problem lines (repeats counted), and the last lines are shown. Example: a 3,006-line failing run becomes about 25 lines.
+
 ### Kanban board
 
 Open `docs/tandem/board/index.html` in a browser to watch task cards move through To do → In progress → Built → Review → Test → Done (plus Blocked), refreshed every 3 seconds. Cards show the agent, model, run count, time, and tokens. Viewing costs no tokens.
@@ -102,6 +112,8 @@ With nothing delegated, `-Task none` prints a one-row "none" table. Wrappers rec
 | Failure lessons | One-line lessons with an `(xN)` count; `lessons.ps1` returns the top three when writing a card |
 | Run table | Agent, model, task, status, time, and tokens at the end of each report (`run-table.ps1`) |
 | Kanban board | Live task board in the browser (`board.ps1`, `board/index.html`) |
+| Work history | Per-topic history, resume after `/clear`, flat reading cost as it grows (`history.ps1`) |
+| Output trimming | Long command output goes to a log; only problem lines are shown (`quiet.ps1`) |
 | Operating docs | Keep roles, ownership, routing, and status in one place |
 
 ### Working rules
@@ -173,7 +185,7 @@ On update, unchanged TANDEM-owned files are replaced automatically. User-edited 
 
 | Scope | Files |
 |---|---|
-| All modes | `docs/tandem/` (or `-DocsRoot`), `tandem/adapt.md`, `tandem/config.json`, `tandem/manifest.json`, shared scripts in `tandem/tools/` (check, token report, Jev, manifest, diff, review check, lessons, run table, kanban board, batch run) |
+| All modes | `docs/tandem/` (or `-DocsRoot`), `tandem/adapt.md`, `tandem/config.json`, `tandem/manifest.json`, shared scripts in `tandem/tools/` (check, token report, Jev, manifest, diff, review check, lessons, run table, kanban board, work history, output trimming, batch run) |
 | `claude-main` | Claude manager, dispatcher, critic, and commands; Codex work lead and agents; Claude settings and project instruction blocks |
 | `codex-main` | Codex configuration and hook; Claude worker doc and settings; `tandem/tools/claude-run.ps1` |
 | `claude-solo` | Claude lead, critic, top/mid/light agents and commands; Claude settings |

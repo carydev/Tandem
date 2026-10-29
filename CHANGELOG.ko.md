@@ -2,6 +2,15 @@
 
 [English](CHANGELOG.md) | **한국어**
 
+## v1.9 (2026-10-29)
+
+- 작업 히스토리: 새 도구 `history.ps1 add|show|search|index|brief|run`. 주제마다 `docs/tandem/history/<주제>.md` 에 번호 붙은 기록과 맨 위 요약 카드(목표·현재·다음·결정·파일·과제·최근 실행). `INDEX.md` 는 주제당 한 줄.
+- `/clear` 뒤 이어가기: 세션 시작·resume·`/clear`·압축 때 SessionStart 훅(Claude·Codex)이 목차를 넣는다(1,500자 상한, `history.inject=false` 나 `TANDEM_HOOK_OFF=1` 로 끔). `show` 는 요약 카드와 최신 기록 2개만 주고, 기록 이후 바뀐 파일·커밋 안 된 변경·같은 파일을 만진 다른 주제를 알린다.
+- 쌓여도 일정한 비용: 기록 20개 초과 시 오래된 것을 `archive/` 로(원본 그대로), 30일 쉰 주제는 목차에서 접음, `search` 는 최대 10줄. 비슷한 주제 이름은 기록 전에 막고 `-New` 로만 새로 만든다. `-Next`·`-Decision` 필수.
+- 출력 줄이기: 새 도구 `quiet.ps1 -Command "<명령>"`. 전체 출력은 로그 파일, 화면엔 종료 코드·문제 줄·끝 줄만. cp949 출력도 읽는다. 모든 에이전트 규칙에 "출력이 긴 명령은 quiet.ps1" 추가.
+- 래퍼는 실행 결과를 과제가 묶인 주제 카드에 한 줄로 붙인다.
+- 업그레이드: 설치기를 다시 실행한다. 도구 2개와 `docs/tandem/history/README.md` 가 추가되고, 훅 설정에 이어가기 훅이 더해지며(기존 훅 유지), config 에 `history` 가 생긴다.
+
 ## v1.8 (2026-10-29)
 
 - 칸반 보드: `docs/tandem/board/index.html` 이 같은 폴더의 `board-data.js` 를 3초마다 다시 읽어 할 일·진행중·작업완료·리뷰·테스트·완료·막힘 칸을 보여 준다. 파일을 더블클릭해서 열면 되고 서버가 필요 없다. 카드에 에이전트·모델·실행 횟수·시간·토큰(runs.jsonl 집계)이 붙는다.

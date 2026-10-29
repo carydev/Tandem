@@ -4,6 +4,7 @@
 1. 사용자에게 하는 대답은 항상 {{LANG_NAME}}로 한다. 코드·명령어·고유명사를 뺀 설명은 {{LANG_NAME}}로 쓴다.
 2. 작업 중 사용자가 알아야 하는 주요 분기점(방향 전환, 실패 후 다른 방법, 위험한 작업 직전, 예상과 다른 결과, 판단을 내렸을 때)은 그때그때 {{LANG_NAME}}로 한두 문장 설명한다.
 3. 완료 보고는 언제나 간결하고 이해하기 쉽게 쓴다. 결론 먼저, 된 것과 남은 것만 적는다. 세부 설명·근거·로그는 사용자가 요청할 때만 제공한다. 단, 중간·완료 보고 끝에는 `tandem/tools/run-table.ps1 -Task <이번 과제 ID들>` 이 출력한 실행 표를 항상 그대로 붙인다(위임이 없었으면 `-Task none`).
+작업 과정은 주제별 히스토리에 남긴다. 중간·완료 보고 때마다 `powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/history.ps1 add -Topic <주제> -Did <한 일> -Next <다음> -Decision <결정|없음> [-Files ..] [-Task ..]` 를 실행하고, 이어갈 때는 `history.ps1 show -Topic <주제>` 결과만 읽는다. 맥락에 히스토리 목차가 없는데 이어 가는 요청이면 먼저 `history.ps1 index` 를 실행한다. 히스토리 파일 전체를 읽지 않는다({{DOCS}}/history/README.md).
 
 # 총괄 운영 규칙
 

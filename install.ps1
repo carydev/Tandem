@@ -175,6 +175,8 @@ if ($UseJev) { $cfg.jev.enabled = $true }
 if (-not $cfg.hook) { $cfg | Add-Member -NotePropertyName hook -NotePropertyValue ([pscustomobject]@{}) -Force }
 [void](Prop $cfg.hook 'enabled' $true)
 [void](Prop $cfg.hook 'max_chars' 800)
+if (-not $cfg.history) { $cfg | Add-Member -NotePropertyName history -NotePropertyValue ([pscustomobject]@{}) -Force }
+foreach ($pair in @(@('inject',$true),@('max_chars',1500),@('max_entries',20),@('keep',10),@('active_days',30),@('active_max',15))) { [void](Prop $cfg.history $pair[0] $pair[1]) }
 if (-not $cfg.update) { $cfg | Add-Member -NotePropertyName update -NotePropertyValue ([pscustomobject]@{}) -Force }
 [void](Prop $cfg.update 'repo' 'carydev/Tandem')
 [void](Prop $cfg.update 'ref' 'main')
@@ -390,6 +392,12 @@ foreach ($entry in $contract.files | Where-Object { $_.kind -eq 'block' }) {
   }
 }
 
+function HasHistoryHook($items) {
+  foreach ($item in @($items)) {
+    foreach ($hook in @($item.hooks)) { if ($hook.command -like '*tandem/tools/history.ps1 brief*') { return $true } }
+  }
+  return $false
+}
 function HasCheckHook($items) {
   foreach ($item in @($items)) {
     foreach ($hook in @($item.hooks)) { if ($hook.command -like '*tandem/tools/check.ps1*') { return $true } }
@@ -402,7 +410,7 @@ function RemoveCheckHooks($document) {
   $changed = $false
   foreach ($item in @($document.hooks.SessionStart)) {
     $oldHooks = @($item.hooks)
-    $keepHooks = @($oldHooks | Where-Object { $_.command -notlike '*tandem/tools/check.ps1*' })
+    $keepHooks = @($oldHooks | Where-Object { $_.command -notlike '*tandem/tools/check.ps1*' -and $_.command -notlike '*tandem/tools/history.ps1 brief*' })
     if ($keepHooks.Count -ne $oldHooks.Count) { $changed = $true }
     if ($keepHooks.Count -gt 0) {
       if ($keepHooks.Count -ne $oldHooks.Count) { $item.hooks = @($keepHooks) }
@@ -415,6 +423,12 @@ function RemoveCheckHooks($document) {
     if ($document.hooks.PSObject.Properties.Count -eq 0) { $document.PSObject.Properties.Remove('hooks') }
   }
   return $changed
+}
+function HistoryHookEntry {
+  # Session start, /clear, resume and compaction: inject the history index so work can continue after a clear.
+  return [pscustomobject]@{ matcher='startup|resume|clear|compact'; hooks=@([pscustomobject]@{
+    type='command'; command='powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/history.ps1 brief'; timeout=15
+  }) }
 }
 function HookEntry([string]$agent) {
   return [pscustomobject]@{ matcher='startup'; hooks=@([pscustomobject]@{
@@ -456,8 +470,10 @@ foreach ($entry in $contract.files | Where-Object { $_.kind -in @('settings','co
     $sessions = @(Prop $hooks 'SessionStart' @())
     if (-not (HasCheckHook $sessions)) {
       $agent = if ($entry.kind -eq 'settings') { 'claude' } else { 'codex' }
-      $hooks.SessionStart = @($sessions) + @(HookEntry $agent)
+      $sessions = @($sessions) + @(HookEntry $agent)
+      $hooks.SessionStart = $sessions
     }
+    if (-not (HasHistoryHook $sessions)) { $hooks.SessionStart = @($sessions) + @(HistoryHookEntry) }
   }
   if ($active -or $removedHook) {
     if (SaveText $full (Json $current)) { $changes++; Note "$($m.replaced): $dst" }

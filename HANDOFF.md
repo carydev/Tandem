@@ -27,7 +27,7 @@ tandem/
   files.json                 파일 계약: 무엇을 어느 모드에 어디로 놓는가
   templates/ko/, en/         언어별 템플릿 (상대 경로 구조 동일)
     claude/ codex/ docs/ blocks/ settings.json adapt.md
-  tools/*.ps1                설치 대상에 그대로 복사되는 도구 (check, token-report, jev, manifest, diff, review-check, lessons, run-table, board, batch-run, codex-run, claude-run)
+  tools/*.ps1                설치 대상에 그대로 복사되는 도구 (check, token-report, jev, manifest, diff, review-check, lessons, run-table, board, history, quiet, batch-run, codex-run, claude-run)
 docs/plan-plugin-distribution.md  보류된 플러그인 배포 계획
 docs/design-v1.1.md          v1.1 설계서 (모드, 렌더링, 지문 업데이트, 훅, Jev, 리포트, 래퍼)
 README.md / README.ko.md     사용자 문서 (영어 기본 / 한국어). 함께 고친다
@@ -77,6 +77,7 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 | 교훈 줄 끝 `(xN)` 횟수, `lessons.ps1 -Tags` 가 횟수순 최대 3줄. `(x3)` 승격. 세션 시작 로드는 여전히 안 함. 훅 알림 800자 상한(`hook.max_chars`/`TANDEM_HOOK_MAX_CHARS`), `TANDEM_HOOK_OFF=1`·`hook.enabled=false` 끄기 | 사용자 결정(2026-10-27). ECC 의 주입 상한·훅 스위치, ai-memory 의 사용 빈도 점수를 가져오되 "상시 로드 안 함" 결정(2026-10-14)은 유지. 횟수가 있어야 40줄 규칙의 "3회 반복" 을 셀 수 있다 |
 | **보고 끝 실행 표는 runs.jsonl 에서 `run-table.ps1` 로만 만든다**. 규칙 3(간결 보고)에 예외로 명시해 매 중간·완료 보고에 붙임(위임 없으면 "없음" 표). 총괄·팀장·전달책 자신의 사용량은 표에 넣지 않음(토큰 리포트 몫) | 사용자 요청(2026-10-28, 보고표 이미지 제시). 모델이 표를 직접 쓰면 숫자를 지어내고, 예외를 명시하지 않으면 간결 규칙 때문에 표를 뺀다. 메인 세션 트랜스크립트 병합은 비용 대비 이득이 작아 보류 |
 | **칸반 보드는 정적 HTML + `board-data.js`(JSONP 식) 폴링**, 데이터는 `board.ps1` 만 쓴다(잠금·원자적 쓰기). 작업한 에이전트는 built 까지만, review 판정·test·done·blocked 는 총괄/팀장. 래퍼 모드는 래퍼가 doing·built·review·blocked 자동 | 사용자 요청(2026-10-29). file:// 페이지는 fetch 로 JSON 을 못 읽어 script 재삽입을 씀(서버 불필요). 에이전트가 자기 카드를 완료로 옮기면 자기 판정이 되어 v1.6 발견자≠검증자와 충돌. 래퍼 자동 이동은 에이전트가 잊어도 보드가 어긋나지 않게 하는 안전장치 |
+| **세션 시작·`/clear`·압축 때 히스토리 목차(INDEX, 1,500자)를 훅으로 넣는다. 교훈 파일은 여전히 안 넣는다**. 주제별 히스토리 + 요약 카드 + archive 회전(20개 초과, 원본 보존) + 30일 휴면 접기 + search 10줄. 요약 카드는 `-Next`·`-Decision` 필드로 기계적으로 생성(AI 요약 없음) | 사용자 결정(2026-10-29). "언제든 /clear 해도 주제별로 최근 맥락에서 이어 가기" 요청과 "쌓이면 찾는 데 토큰이 많이 든다" 우려에 대한 대책. 2026-10-14 교훈 미로드 결정과 겹쳐 확인받음 - 목차는 현재 상태 색인이라 허용. claude-mem·Letta(단계별 꺼내 읽기), beads·ai-memory(오래된 것 압축, 원본 보존), planning-with-files(주제별 인계·짧은 목차) 참고 |
 
 ## 검증된 것 (v1.1, 2026-10-13, Windows PowerShell 5.1.19041)
 
@@ -144,6 +145,16 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - solo 모드 하위 일꾼이 실제로 built 로 옮기는지는 미확인 (규칙만 추가)
 - 배포 검증: 태그 `v1.8` + GitHub Releases, 실제 URL 한 줄 설치(codex-solo, ko) 성공 - version 1.8, `board.ps1`·`docs/tandem/board/index.html` 배치, `board.ps1 add` 동작. manga-trans 설치본은 v1.5 그대로
 
+## 검증된 것 (v1.9, 2026-10-29)
+
+- `history.ps1`: add/show/search/index/brief/run. 비슷한 이름 차단(로그인/로그인화면, 결재/결제), 주의 3종(기록 이후 바뀐 파일, 커밋 안 된 변경, 같은 파일을 만진 다른 주제), 22개 기록 → #1-#11 archive 이동·번호로 다시 열기·검색 적중, 6개 동시 add 유실 없음, 목차 759바이트
+- 설치 8조합 성공, 잔존 토큰 0, 도구 13개(claude-solo 12), Claude 설정·Codex hooks.json 에 이어가기 훅이 기존 check 훅과 나란히 추가, config `history` 기본값
+- 실제 Claude 세션(`claude -p`, haiku): 도구 없이 "결제 → 환불 테스트 작성" 답변 - SessionStart 훅 목차 주입 동작 확인
+- 실제 Codex(`codex exec`): 신뢰 안 된 임시 폴더라 프로젝트 훅이 안 돌아 "목차 없음". 그래서 규칙에 "목차가 없으면 `history.ps1 index` 먼저" 대비책 추가 → Codex 가 `history.ps1 index` → `show -Topic 결제` 를 실행하려 함(임시 폴더에서 Codex 샌드박스가 프로세스 생성 실패 `helper_unknown_error`, TANDEM 과 무관). 승인된 실제 프로젝트에서 Codex 훅 주입은 미확인 - 업그레이드 뒤 `/hooks` 승인 필요
+- Git Bash 에서 `powershell ... | python` 파이프는 0바이트가 되는 현상(cmd 파이프·리다이렉트는 정상). 훅 출력 문제 아님
+- `quiet.ps1`: 3,006줄 실패 출력 → 약 25줄(반복 줄 횟수 묶음), 종료 코드 그대로 반환, `-Shell powershell`, cp949 출력 디코딩, 로그 30개 유지
+- PS 5.1 함정 3건: `-File` 실행에서 맨 끝 인자 `-` 는 스크립트가 아무 출력 없이 종료 코드 2 → 결정 없음 표시는 `없음`/`none`. 변수 `$files` 가 파라미터 `$Files`(string[])와 같은 변수라 FileInfo 가 문자열로 변함. 함수 이름 `Git` 이 `git` 실행 파일보다 먼저 잡혀 자기 자신을 호출. 2차원 배열 `$d[($i-1),$j]` 파싱 실패
+
 ## 검증 안 된 것 (남은 일)
 
 - 래퍼(`codex-run`/`claude-run`) R2 뒤 자동 `review-check` 실행과 `findings` 기록을 실제 호출로 확인 (코드 경로만 파서 검증)
@@ -208,6 +219,7 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
       - Codex 카드 없이 Claude 가 직접 구현 (설치기·템플릿 ko/en·도구가 얽혀 있어 위임 비용이 더 컸다). 검토한 저장소: cloudflare/security-audit-skill, akitaonrails/ai-memory, affaan-m/ECC (ruflo 예산 상한·openbot 한도 리셋 표시는 보류)
 - [x] **v1.7** (2026-10-28): 보고 끝 실행 표 - `run-table.ps1`, runs.jsonl `kind`·`agent`·`title`·`duration_s`, 규칙 3 예외로 보고마다 표 첨부, 카드 첫 줄 `# <ID> <제목>`
 - [x] **v1.8** (2026-10-29): 칸반 보드 - `board.ps1`, `docs/tandem/board/index.html`(3초 폴링), 래퍼 자동 이동, 에이전트는 built 까지만·판정 칸은 총괄/팀장
+- [x] **v1.9** (2026-10-29): 작업 히스토리(`history.ps1`, 주제별 기록·요약 카드·archive 회전·이어가기 주의) + `/clear` 이어가기 훅 + 출력 줄이기(`quiet.ps1`)
 - [ ] **보류** 플러그인 방식 배포 (Claude `/plugin`, Codex `codex plugin`) - 한 줄 설치는 공식 마켓플레이스 심사가 필요해 보류. 계획: `docs/plan-plugin-distribution.md`
 
 ## 지키면 좋을 것

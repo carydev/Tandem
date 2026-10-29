@@ -2,6 +2,15 @@
 
 **English** | [한국어](CHANGELOG.ko.md)
 
+## v1.9 (2026-10-29)
+
+- Work history: new tool `history.ps1 add|show|search|index|brief|run`. Each topic keeps numbered entries in `docs/tandem/history/<topic>.md` with a summary card on top (goal, now, next, decisions, files, tasks, recent runs). `INDEX.md` has one line per topic.
+- Resume after `/clear`: a SessionStart hook (Claude and Codex) injects the index at startup, resume, `/clear`, and compaction (1,500-character cap; off with `history.inject=false` or `TANDEM_HOOK_OFF=1`). `show` returns only the card and the two latest entries and flags files changed since, uncommitted changes, and other topics that touched the same files.
+- Flat cost as it grows: past 20 entries the oldest move to `archive/` unchanged, topics idle for 30 days fold in the index, and `search` returns at most 10 lines. Near-duplicate topic names are stopped before writing; `-New` creates one deliberately. `-Next` and `-Decision` are required.
+- Output trimming: new tool `quiet.ps1 -Command "<command>"`. Full output goes to a log file; only the exit code, problem lines, and last lines are shown. cp949 output is decoded. All agent rules now say to run long-output commands through quiet.ps1.
+- Wrappers add a one-line run note to the topic that owns the task.
+- Upgrade: rerun the installer. It adds the two tools and `docs/tandem/history/README.md`, adds the resume hook next to existing hooks, and adds `history` to the config.
+
 ## v1.8 (2026-10-29)
 
 - Kanban board: `docs/tandem/board/index.html` reloads `board-data.js` from the same folder every 3 seconds and shows To do, In progress, Built, Review, Test, Done, and Blocked. Double-click to open; no server needed. Cards show the agent, model, run count, time, and tokens (from runs.jsonl).

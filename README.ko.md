@@ -71,6 +71,16 @@ R2 검토는 지적마다 `F1 [confirmed|needs_validation|rejected]` 판정 줄�
 `tandem/tools/review-check.ps1` 이 형식과 R3 응답(`F1 fixed|disputed|deferred`) 누락을 검사한다. 래퍼는 R2 뒤 자동으로 돌려 요약에 `review=` 줄을 붙이고 `runs.jsonl` 에 판정 수를 남긴다.
 발견자는 검증하지 않는다. needs_validation 은 총괄이 직접 확인하거나 별도 과제로 확인한 뒤 confirmed 또는 rejected 로 판정한다.
 
+### 작업 히스토리와 이어가기
+
+주제(로그인, 결제 등)마다 `docs/tandem/history/<주제>.md` 에 작업 과정을 번호 붙여 쌓는다. 총괄은 중간·완료 보고 때 `history.ps1 add` 로 한 항목(한 일, 결정, 바뀐 파일, 다음 할 일)을 남긴다. 래퍼는 묶인 과제의 실행 결과를 자동으로 붙인다.
+세션 시작·`/clear`·압축 직후 훅이 주제 목차(`INDEX.md`, 1,500자 이하)를 자동으로 넣는다. "로그인 이어서" 같은 요청이 오면 총괄은 `history.ps1 show -Topic 로그인` 으로 요약 카드와 최신 기록만 읽고 이어 간다. 기록 이후 바뀐 파일, 커밋 안 된 변경, 같은 파일을 만진 다른 주제는 `주의:` 로 알려 준다.
+문서가 오래 쌓여도 읽는 양은 그대로다. 주제 파일 기록이 20개를 넘으면 오래된 것이 `archive/` 로 옮겨지고, 30일 동안 쉰 주제는 목차에서 접힌다. 지난 내용은 `history.ps1 search <단어>` 로 번호만 찾아 연다. 비슷한 이름의 새 주제(로그인/로그인화면)는 기록 전에 막는다.
+
+### 출력 줄이기
+
+빌드·테스트·설치처럼 출력이 긴 명령은 `tandem/tools/quiet.ps1 -Command "<명령>"` 으로 돌린다. 전체 출력은 `tandem/.cache/quiet/` 로그에 남기고, 종료 코드·문제 줄(같은 줄은 횟수로 묶음)·끝 줄만 보여 준다. 예: 3,006줄 실패 출력 → 약 25줄.
+
 ### 칸반 보드
 
 `docs/tandem/board/index.html` 을 브라우저로 열면 과제 카드가 할 일 → 진행중 → 작업완료 → 리뷰 → 테스트 → 완료(그리고 막힘) 칸을 오가는 모습이 3초마다 갱신된다. 카드에는 에이전트, 모델, 실행 횟수, 시간, 토큰이 붙는다. 보는 데는 토큰이 들지 않는다.
@@ -102,6 +112,8 @@ R2 검토는 지적마다 `F1 [confirmed|needs_validation|rejected]` 판정 줄�
 | 실패 교훈 | 한 줄 교훈에 `(xN)` 횟수, 카드 쓸 때 `lessons.ps1` 로 상위 3줄만 |
 | 실행 표 | 보고 끝에 에이전트·모델·작업·상태·시간·토큰 표 (`run-table.ps1`) |
 | 칸반 보드 | 브라우저에서 보는 실시간 과제 보드 (`board.ps1`, `board/index.html`) |
+| 작업 히스토리 | 주제별 기록과 `/clear` 뒤 이어가기, 쌓여도 일정한 읽기 비용 (`history.ps1`) |
+| 출력 줄이기 | 긴 명령 출력은 로그 파일로, 화면엔 문제 줄만 (`quiet.ps1`) |
 | 운영 문서 | 역할, 소유권, 모델 배치, 현황 관리 |
 
 ### 작업 규칙
@@ -173,7 +185,7 @@ Claude 총괄 세션에서는 `/tandem-tokens`, PowerShell에서는 `tandem/tool
 
 | 범위 | 파일 |
 |---|---|
-| 모든 모드 | `docs/tandem/` (`-DocsRoot`로 변경 가능), `tandem/adapt.md`, `tandem/config.json`, `tandem/manifest.json`, `tandem/tools/`의 공통 스크립트 (점검, 토큰 리포트, Jev, 지문, 변경분, 검토 판정 검사, 교훈 조회, 실행 표, 칸반 보드, 배치 실행) |
+| 모든 모드 | `docs/tandem/` (`-DocsRoot`로 변경 가능), `tandem/adapt.md`, `tandem/config.json`, `tandem/manifest.json`, `tandem/tools/`의 공통 스크립트 (점검, 토큰 리포트, Jev, 지문, 변경분, 검토 판정 검사, 교훈 조회, 실행 표, 칸반 보드, 작업 히스토리, 출력 줄이기, 배치 실행) |
 | `claude-main` | Claude 팀장·전달책·검수자와 명령, Codex 실무 리드와 에이전트, Claude 설정과 프로젝트 지시 블록 |
 | `codex-main` | Codex 설정과 훅, Claude 일꾼 문서와 설정, `tandem/tools/claude-run.ps1` |
 | `claude-solo` | Claude 총괄·검수자·상중하 일꾼과 명령, Claude 설정 |

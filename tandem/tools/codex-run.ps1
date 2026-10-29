@@ -99,6 +99,8 @@ try {
                 else { & $boardTool note -Task $s.task -Note ('fail: '+$note) -Quiet | Out-Null }
             } catch {}
         }
+        $historyTool=Join-Path $PSScriptRoot 'history.ps1'
+        if (Test-Path -LiteralPath $historyTool) { try { & $historyTool run -Task $s.task -Line ("$($s.round) $result $($s.agent) "+$(if ($null -ne $duration) {"$($duration)s"} else {''})) -Quiet | Out-Null } catch {} }
         $done=@{result=$result;exit=$exit;out_exists=$exists;summary=$summary;session=$session;resumed=$resumed;tokens=$tokens;review=$review}
         [IO.File]::WriteAllText($RunnerState+'.done.json',($done | ConvertTo-Json -Compress -Depth 8),$utf8)
         exit 0
