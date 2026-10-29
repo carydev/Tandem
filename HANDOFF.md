@@ -152,6 +152,7 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - 실제 Claude 세션(`claude -p`, haiku): 도구 없이 "결제 → 환불 테스트 작성" 답변 - SessionStart 훅 목차 주입 동작 확인
 - 실제 Codex(`codex exec`): 신뢰 안 된 임시 폴더라 프로젝트 훅이 안 돌아 "목차 없음". 그래서 규칙에 "목차가 없으면 `history.ps1 index` 먼저" 대비책 추가 → Codex 가 `history.ps1 index` → `show -Topic 결제` 를 실행하려 함(임시 폴더에서 Codex 샌드박스가 프로세스 생성 실패 `helper_unknown_error`, TANDEM 과 무관). 승인된 실제 프로젝트에서 Codex 훅 주입은 미확인 - 업그레이드 뒤 `/hooks` 승인 필요
 - Git Bash 에서 `powershell ... | python` 파이프는 0바이트가 되는 현상(cmd 파이프·리다이렉트는 정상). 훅 출력 문제 아님
+- 배포 검증: 태그 `v1.9` + GitHub Releases, 실제 URL 한 줄 설치(codex-solo, ko) 성공 - version 1.9, 도구 13개, hooks.json 이어가기 훅, `history.ps1 add` 동작. manga-trans 설치본은 v1.5 그대로
 - `quiet.ps1`: 3,006줄 실패 출력 → 약 25줄(반복 줄 횟수 묶음), 종료 코드 그대로 반환, `-Shell powershell`, cp949 출력 디코딩, 로그 30개 유지
 - PS 5.1 함정 3건: `-File` 실행에서 맨 끝 인자 `-` 는 스크립트가 아무 출력 없이 종료 코드 2 → 결정 없음 표시는 `없음`/`none`. 변수 `$files` 가 파라미터 `$Files`(string[])와 같은 변수라 FileInfo 가 문자열로 변함. 함수 이름 `Git` 이 `git` 실행 파일보다 먼저 잡혀 자기 자신을 호출. 2차원 배열 `$d[($i-1),$j]` 파싱 실패
 
