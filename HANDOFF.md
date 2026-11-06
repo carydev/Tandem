@@ -2,6 +2,24 @@
 
 > 이 파일은 Claude Code 세션이 작업을 이어받기 위한 문서다. **작업 시작 전에 전부 읽는다.**
 > 작업이 끝나면 "진행 상황" 절을 갱신한다.
+> 최종 갱신: 2026-11-06 - v1.10 배포 완료. 지금 상태와 다음 액션은 바로 아래 「현재 상태」 절, 새 세션에 붙여넣을 글은 맨 끝 「다음 세션 첫 프롬프트」 절.
+
+## 현재 상태 (2026-11-06)
+
+| 항목 | 상태 |
+|---|---|
+| 배포 버전 | v1.10 (디자인 품질 계층). 커밋 `92dd15d`, 태그 `v1.10`, GitHub Releases, 원격 `VERSION` 1.10 |
+| 작업 트리 | 깨끗함. 진행 중인 작업 없음 |
+| 막힌 것 | 없음 |
+| 설치본 | manga-trans 는 v1.5(codex-solo) 그대로. 설치본 업그레이드는 프로젝트마다 사용자 결정 |
+
+다음 액션 후보(우선순위순, 모두 사용자 지시 대기):
+
+1. 탄뎀을 쓰는 프로젝트 업그레이드. 프로젝트 루트에서 `& ([scriptblock]::Create((iwr -useb https://raw.githubusercontent.com/carydev/Tandem/main/boot.ps1))) -Yes` 를 실행한다. 모드와 언어는 유지된다(2026-11-06 실제 주소로 v1.9 → v1.10 확인, `.new` 0개). 그 뒤 `/tandem`(Codex 모드는 `tandem/adapt.md` 적응)을 다시 돌려 `design.platform` 을 채우고, Codex 모드는 `/hooks` 승인을 다시 한다.
+2. 안드로이드 같은 네이티브 프로젝트에서 디자인 과제 1건을 실제로 돌려 `design-platforms.md` 대응표를 검증한다.
+3. Codex 실제 호출로 디자인 검수(RD)와 구현 지시를 확인한다. 2026-11-06 이 PC 의 PATH 에 `codex.cmd` 가 없어 가짜 CLI 로만 확인했다.
+4. 솔로 모드에서 하위 일꾼이 `design.ps1 brief` 를 스스로 실행하는지 확인한다.
+5. 원본 스킬(jakubkrehel/skills)이 올라가면 사본을 갱신한다. 절차는 「검증 안 된 것」 절.
 
 ## 이 저장소는 무엇인가
 
@@ -168,11 +186,12 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - 실제 호출(Claude Code 2.1.318, sonnet, codex-main 임시 설치본, 작은 웹 화면): 결함 6종을 심은 변경에 RD → 2분, block, confirmed 12(높음 8)로 전부 근거 줄과 함께 지적. 같은 과제를 R1 로 구현 → 일꾼이 스킬 6개를 읽고 스크린샷을 남김, 요약에 `design=web review=missing`. RD → block(높음 1: 서버 없이 "삭제했습니다" 표시), R3 → RD approve → `board.ps1 move -To done` 통과. 5회 호출 10분 25초, 비캐시 66k·캐시 2.3M 토큰
 - 이 실호출로 claude-run 의 `--resume` 이어쓰기가 실제로 동작함을 처음 확인(`resumed=true`). 단, 그때 이어 쓴 세션이 RD 검수자 세션이어서 위 결정대로 고쳤다
 - 보드 화면: 헤드리스 Edge 로 넓은 창(7칸)과 좁은 창(520px, 2칸 줄바꿈) 캡처 확인. 색 대비는 계산으로 확인(라이트 최저 4.67, 다크 최저 5.35)
+- 배포 검증(`.work/v1.10/deploy-check.ps1`): 원격 `VERSION` 이 main 과 태그 `v1.10` 모두 1.10. 실제 주소 한 줄 설치(codex-solo, ko)에서 `-Plan` 이 흔적을 남기지 않았고 실제 설치는 version 1.10, `tandem/design/` 66개, 도구 14개, `design.ps1 brief`·`status` 동작. v1.9 설치본에서 훅 알림 "1.9 -> 1.10". 같은 설치본을 옵션 없이 실제 주소로 올리니 모드·언어 유지, `.new` 0개, `CLAUDE.md` 에 디자인 규칙 반영. 커밋된 트리를 뽑아 131항목을 다시 돌려 통과. 태그 `v1.10` + GitHub Releases
 - PS 5.1 함정: `[string](@() | Select-Object -First 1)` 은 빈 문자열이 아니라 `$null`. 함수 인자 `-To` 는 `$tool` 같은 파라미터에 접두사로 묶인다. `powershell -File x.ps1 ... -` 는 "name 인수" 오류. 이 환경의 Bash 는 heredoc 밖에서도 `\\` 를 `\` 로 줄인다
 
 ## 검증 안 된 것 (남은 일)
 
-- **v1.10 은 커밋·태그·푸시·릴리스를 하지 않았다.** 사용자 지시를 기다린다. 원격 한 줄 설치 검증도 그 뒤에 한다
+- v1.10 배포는 끝났다(「진행 상황」). 설치본 업그레이드는 하지 않았다. manga-trans 는 v1.5 그대로이고 올릴지는 사용자 결정
 - v1.10: Codex 실제 호출로 RD·구현 지시 확인(이 PC 의 현재 PATH 에 `codex.cmd` 가 없어 가짜 CLI 로만 확인). 솔로 모드에서 일꾼이 `design.ps1 brief` 를 스스로 실행하는지. Android·iOS 프로젝트 실사용(대응표의 API 이름은 실제 빌드로 확인하지 않았다). 라이트 모드 보드 캡처(이 PC 는 다크 모드라 계산만 함)
 - 스킬 사본 갱신 절차: 원본을 받아 `skills/` 에서 `teardown` 을 뺀 폴더를 `tandem/design/skills/` 에 덮어쓰고(줄바꿈 LF), `LICENSE` 를 복사하고, `SOURCE.md` 의 버전·커밋을 고친다. 설치기는 사용자가 안 고친 파일만 교체한다
 
@@ -239,9 +258,10 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - [x] **v1.7** (2026-10-28): 보고 끝 실행 표 - `run-table.ps1`, runs.jsonl `kind`·`agent`·`title`·`duration_s`, 규칙 3 예외로 보고마다 표 첨부, 카드 첫 줄 `# <ID> <제목>`
 - [x] **v1.8** (2026-10-29): 칸반 보드 - `board.ps1`, `docs/tandem/board/index.html`(3초 폴링), 래퍼 자동 이동, 에이전트는 built 까지만·판정 칸은 총괄/팀장
 - [x] **v1.9** (2026-10-29): 작업 히스토리(`history.ps1`, 주제별 기록·요약 카드·archive 회전·이어가기 주의) + `/clear` 이어가기 훅 + 출력 줄이기(`quiet.ps1`)
-- [x] **v1.10** (2026-11-06): 디자인 품질 계층 - Interfaces 스킬 사본(`tandem/design/`), 카드 `디자인:` 줄, `design.ps1`, 라운드 RD, 보드 완료 관문, `design.md`·`design-platforms.md`, 보드 화면 수정, 설치기 `tree`, 래퍼 수정 3건. **미커밋**
+- [x] **v1.10** (2026-11-06): 디자인 품질 계층 - Interfaces 스킬 사본(`tandem/design/`), 카드 `디자인:` 줄, `design.ps1`, 라운드 RD, 보드 완료 관문, `design.md`·`design-platforms.md`, 보드 화면 수정, 설치기 `tree`, 래퍼 수정 3건
       - Codex 카드 없이 Claude 가 직접 구현(설치기·래퍼·템플릿 ko/en 이 얽혀 있다). 작업 스크립트와 시험: `.work/v1.10/`
       - 계기: 사용자가 jakub.kr/skills 조사 요청 → "품질이 토큰보다 우선, 탄뎀이 자동으로 쓰게, 안드로이드 앱 UI 에도"
+      - 배포: 커밋 `92dd15d`, 태그 `v1.10` 푸시, GitHub Releases https://github.com/carydev/Tandem/releases/tag/v1.10. 배포 검증은 「검증된 것 (v1.10)」
 - [ ] **보류** 플러그인 방식 배포 (Claude `/plugin`, Codex `codex plugin`) - 한 줄 설치는 공식 마켓플레이스 심사가 필요해 보류. 계획: `docs/plan-plugin-distribution.md`
 
 ## 지키면 좋을 것
@@ -250,3 +270,27 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - 스크립트를 고쳤으면 빈 폴더와 기존 파일이 있는 폴더 양쪽에서 다시 돌려 본다.
 - 문서 문체: 결론 먼저, 짧고 직접적으로, 미사여구 없이. 범위는 하이픈(-)으로 표기.
 - 작업 문서는 한국어가 기본이다. README만 예외: `README.md`(영어, 기본)와 `README.ko.md`(한국어)를 함께 고친다.
+
+## 다음 세션 첫 프롬프트
+
+새 세션에 아래를 그대로 붙여넣는다. 맥락만 복원하고 지시를 기다리게 하는 글이다.
+
+```
+이 세션은 TANDEM 저장소(D:\dev\Tandem-repo, github.com/carydev/Tandem) 유지보수 세션이다.
+방향과 결정은 내가 하고, 조사·구현·검증·배포는 네가 한다.
+
+먼저 읽어라:
+1. D:\dev\Tandem-repo\HANDOFF.md 의 「현재 상태」, 「설계 결정과 이유」, 「검증된 것 (v1.10)」, 「검증 안 된 것」, 「진행 상황」의 v1.10 항목
+2. CHANGELOG.ko.md 의 v1.10 절
+3. git status 와 git log -3 으로 실제 상태 확인
+
+핵심 원칙:
+- 결과물 품질이 토큰 절약보다 우선이다.
+- 대답은 한글로, 완료 보고는 간결하게. 커밋과 푸시는 내가 지시할 때만 한다.
+- ko 템플릿을 고치면 en 도 같은 뜻으로 고친다. 인코딩은 UTF-8, ps1 은 BOM 유지, boot.ps1 은 ASCII 그대로.
+
+현재 상태: v1.10(디자인 품질 계층) 배포 완료. 작업 트리 깨끗함. 진행 중인 작업 없음. 막힌 것 없음.
+다음 후보: (1) 탄뎀을 쓰는 프로젝트 업그레이드 (2) 안드로이드 프로젝트에서 디자인 과제 실사용 검증 (3) Codex 실제 호출 확인 (4) 솔로 모드 확인.
+
+복원이 끝나면 3-5줄 요약만 보고하고 내 지시를 기다려라. 스스로 과제를 만들거나 파일을 수정하거나 실행하지 마라.
+```
