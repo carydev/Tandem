@@ -87,6 +87,15 @@ R2 검토는 지적마다 `F1 [confirmed|needs_validation|rejected]` 판정 줄�
 데이터는 같은 폴더의 `board.json` 이고 `tandem/tools/board.ps1` 만 고친다(`add`, `move`, `note`, `remove`, `list`, `sync`, `open`). 파일 잠금이 있어 여러 래퍼가 동시에 써도 깨지지 않는다.
 작업한 에이전트는 작업완료까지만 옮기고, 리뷰·테스트·완료·막힘은 총괄(claude-main 은 팀장)이 판정할 때 옮긴다. 래퍼가 있는 모드에서는 래퍼가 진행중·작업완료·리뷰·막힘을 자동으로 옮긴다.
 
+### 디자인 품질
+
+화면과 사람이 보는 문서는 [Interfaces 스킬](https://jakub.kr/skills)의 규칙으로 만들고 검수한다. 스킬 사본이 `tandem/design/skills/` 에 함께 설치되고 에이전트가 경로로 읽는다. 따로 설치하거나 불러 줄 필요가 없다.
+과제 카드에 `디자인: <web|android|ios|flutter|desktop|doc>` 한 줄을 적으면 나머지는 자동이다. 일꾼은 접근성·레이아웃·문구·타이포·색·UI 스킬을 읽고 만든다. 그다음 별도 세션이 읽기 전용으로 디자인 검수(라운드 `RD`)를 한다. 판정이 approve 가 되기 전에는 보드에서 완료로 옮겨지지 않는다.
+스킬은 웹 기준으로 쓰여 있다. Android·iOS·Flutter·데스크톱은 `docs/tandem/design-platforms.md` 의 대응표로 옮겨 적용한다. 예: 접근 가능한 이름은 `contentDescription`, 터치 영역은 48dp, 확인 기준은 글꼴 배율 200%.
+줄을 적지 않은 카드에서 화면 파일이 바뀌면 래퍼가 `design=unmarked` 로 알린다. 결과물 품질이 토큰 절약보다 우선이라는 원칙으로 설계했다.
+실측(2026-11-06, Claude Sonnet, 작은 웹 화면): 구현 1회, 디자인 검수 2회, 수정 1회에 약 10분. 일부러 넣은 결함 6종을 첫 검수가 모두 근거 줄과 함께 잡았다.
+끄려면 `tandem/config.json` 의 `design.enabled` 를 false 로 둔다. 규칙은 `docs/tandem/design.md`.
+
 ### 실행 표
 
 총괄은 중간·완료 보고 끝에 이번 과제에서 쓴 하위 에이전트 표를 붙인다. `tandem/tools/run-table.ps1 -Task <ID,ID>` 가 `runs.jsonl` 로 만든다.
@@ -112,6 +121,7 @@ R2 검토는 지적마다 `F1 [confirmed|needs_validation|rejected]` 판정 줄�
 | 실패 교훈 | 한 줄 교훈에 `(xN)` 횟수, 카드 쓸 때 `lessons.ps1` 로 상위 3줄만 |
 | 실행 표 | 보고 끝에 에이전트·모델·작업·상태·시간·토큰 표 (`run-table.ps1`) |
 | 칸반 보드 | 브라우저에서 보는 실시간 과제 보드 (`board.ps1`, `board/index.html`) |
+| 디자인 품질 | 카드 한 줄로 스킬 적용과 디자인 검수, 통과 전 완료 차단 (`design.ps1`, `tandem/design/`) |
 | 작업 히스토리 | 주제별 기록과 `/clear` 뒤 이어가기, 쌓여도 일정한 읽기 비용 (`history.ps1`) |
 | 출력 줄이기 | 긴 명령 출력은 로그 파일로, 화면엔 문제 줄만 (`quiet.ps1`) |
 | 운영 문서 | 역할, 소유권, 모델 배치, 현황 관리 |
@@ -186,6 +196,7 @@ Claude 총괄 세션에서는 `/tandem-tokens`, PowerShell에서는 `tandem/tool
 | 범위 | 파일 |
 |---|---|
 | 모든 모드 | `docs/tandem/` (`-DocsRoot`로 변경 가능), `tandem/adapt.md`, `tandem/config.json`, `tandem/manifest.json`, `tandem/tools/`의 공통 스크립트 (점검, 토큰 리포트, Jev, 지문, 변경분, 검토 판정 검사, 교훈 조회, 실행 표, 칸반 보드, 작업 히스토리, 출력 줄이기, 배치 실행) |
+| 모든 모드 | `tandem/design/` (Interfaces 스킬 사본 13개와 라이선스), `docs/tandem/design.md`, `docs/tandem/design-platforms.md`, `tandem/tools/design.ps1` |
 | `claude-main` | Claude 팀장·전달책·검수자와 명령, Codex 실무 리드와 에이전트, Claude 설정과 프로젝트 지시 블록 |
 | `codex-main` | Codex 설정과 훅, Claude 일꾼 문서와 설정, `tandem/tools/claude-run.ps1` |
 | `claude-solo` | Claude 총괄·검수자·상중하 일꾼과 명령, Claude 설정 |
@@ -212,3 +223,5 @@ Claude 총괄 세션에서는 `/tandem-tokens`, PowerShell에서는 `tandem/tool
 ## 라이선스
 
 [MIT](LICENSE)
+
+`tandem/design/skills/` 의 Interfaces 스킬은 Jakub Krehel 의 저작물이며 MIT 라이선스로 원본 그대로 포함한다(`tandem/design/LICENSE`, `tandem/design/SOURCE.md`).

@@ -87,6 +87,15 @@ Open `docs/tandem/board/index.html` in a browser to watch task cards move throug
 The data is `board.json` in the same folder, edited only by `tandem/tools/board.ps1` (`add`, `move`, `note`, `remove`, `list`, `sync`, `open`). A file lock keeps concurrent wrapper writes safe.
 The agent that did the work moves its card only as far as Built; Review, Test, Done, and Blocked are moved by the lead (the manager in claude-main) when ruling. In wrapper modes the wrapper moves In progress, Built, Review, and Blocked automatically.
 
+### Design quality
+
+Screens and documents people look at are built and reviewed to the rules of the [Interfaces skills](https://jakub.kr/skills). Copies of the skills are installed under `tandem/design/skills/` and agents read them by path. Nothing has to be installed separately or invoked by hand.
+Write one line on the task card, `Design: <web|android|ios|flutter|desktop|doc>`, and the rest is automatic. The worker reads the accessibility, layout, writing, typography, color and UI skills and builds to them. A separate read-only session then runs the design review (round `RD`). The card cannot move to done on the board until the verdict is approve.
+The skills are written for the web. For Android, iOS, Flutter and desktop, `docs/tandem/design-platforms.md` maps each rule to the platform. Examples: an accessible name becomes `contentDescription`, a touch target is 48dp and the check is at 200% font scale.
+When a card without the line changes interface files, the wrapper reports `design=unmarked`. The design rests on one principle: output quality comes before token savings.
+Measured (2026-11-06, Claude Sonnet, a small web screen): one build, two design reviews and one fix round took about 10 minutes. The first review caught all six planted defects, each with an evidence line.
+To turn it off, set `design.enabled` to false in `tandem/config.json`. The rules are in `docs/tandem/design.md`.
+
 ### Run table
 
 The lead ends interim and completion reports with a table of the subagents used for the task. `tandem/tools/run-table.ps1 -Task <ID,ID>` builds it from `runs.jsonl`.
@@ -112,6 +121,7 @@ With nothing delegated, `-Task none` prints a one-row "none" table. Wrappers rec
 | Failure lessons | One-line lessons with an `(xN)` count; `lessons.ps1` returns the top three when writing a card |
 | Run table | Agent, model, task, status, time, and tokens at the end of each report (`run-table.ps1`) |
 | Kanban board | Live task board in the browser (`board.ps1`, `board/index.html`) |
+| Design quality | One card line applies the skills and a design review, and blocks done until it passes (`design.ps1`, `tandem/design/`) |
 | Work history | Per-topic history, resume after `/clear`, flat reading cost as it grows (`history.ps1`) |
 | Output trimming | Long command output goes to a log; only problem lines are shown (`quiet.ps1`) |
 | Operating docs | Keep roles, ownership, routing, and status in one place |
@@ -186,6 +196,7 @@ On update, unchanged TANDEM-owned files are replaced automatically. User-edited 
 | Scope | Files |
 |---|---|
 | All modes | `docs/tandem/` (or `-DocsRoot`), `tandem/adapt.md`, `tandem/config.json`, `tandem/manifest.json`, shared scripts in `tandem/tools/` (check, token report, Jev, manifest, diff, review check, lessons, run table, kanban board, work history, output trimming, batch run) |
+| All modes | `tandem/design/` (13 Interfaces skill copies and their license), `docs/tandem/design.md`, `docs/tandem/design-platforms.md`, `tandem/tools/design.ps1` |
 | `claude-main` | Claude manager, dispatcher, critic, and commands; Codex work lead and agents; Claude settings and project instruction blocks |
 | `codex-main` | Codex configuration and hook; Claude worker doc and settings; `tandem/tools/claude-run.ps1` |
 | `claude-solo` | Claude lead, critic, top/mid/light agents and commands; Claude settings |
@@ -212,3 +223,5 @@ See the [Changelog](CHANGELOG.md) for release notes.
 ## License
 
 [MIT](LICENSE)
+
+The Interfaces skills under `tandem/design/skills/` are the work of Jakub Krehel, included unmodified under the MIT license (`tandem/design/LICENSE`, `tandem/design/SOURCE.md`).

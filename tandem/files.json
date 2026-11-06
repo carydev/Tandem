@@ -1,5 +1,5 @@
 {
-  "_comment": "TANDEM file contract. src is relative to tandem/templates/<lang>/ (render) or to the repo root (copy). modes: claude-main | codex-main | claude-solo | codex-solo. kind: file | block | settings | codex-hooks | copy",
+  "_comment": "TANDEM file contract. src is relative to tandem/templates/<lang>/ (render) or to the repo root (copy). modes: claude-main | codex-main | claude-solo | codex-solo. kind: file | block | settings | codex-hooks | copy | tree (every file under src, relative to the repo root, copied under dst)",
   "files": [
     { "src": "claude/agents/tandem-manager.md",     "dst": ".claude/agents/tandem-manager.md",     "kind": "file", "modes": ["claude-main"] },
     { "src": "claude/agents/tandem-dispatch.md",    "dst": ".claude/agents/tandem-dispatch.md",    "kind": "file", "modes": ["claude-main"] },
@@ -22,6 +22,8 @@
     { "src": "docs/batch.md",                       "dst": "{{DOCS}}/batch.md",                    "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "docs/model-routing.md",               "dst": "{{DOCS}}/model-routing.md",            "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "docs/delegation.md",                  "dst": "{{DOCS}}/delegation.md",               "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
+    { "src": "docs/design.md",                      "dst": "{{DOCS}}/design.md",                   "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
+    { "src": "docs/design-platforms.md",            "dst": "{{DOCS}}/design-platforms.md",         "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "docs/operating-model.md",             "dst": "{{DOCS}}/operating-model.md",          "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "docs/harness-status.md",              "dst": "{{DOCS}}/harness-status.md",           "kind": "file", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "docs/claude-worker.md",               "dst": "{{DOCS}}/claude-worker.md",            "kind": "file", "modes": ["codex-main"] },
@@ -47,10 +49,13 @@
     { "src": "tandem/tools/lessons.ps1",            "dst": "tandem/tools/lessons.ps1",             "kind": "copy", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "tandem/tools/run-table.ps1",          "dst": "tandem/tools/run-table.ps1",           "kind": "copy", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "tandem/tools/board.ps1",              "dst": "tandem/tools/board.ps1",               "kind": "copy", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
+    { "src": "tandem/tools/design.ps1",             "dst": "tandem/tools/design.ps1",              "kind": "copy", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "tandem/tools/history.ps1",            "dst": "tandem/tools/history.ps1",             "kind": "copy", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "tandem/tools/quiet.ps1",              "dst": "tandem/tools/quiet.ps1",               "kind": "copy", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
     { "src": "tandem/tools/codex-run.ps1",          "dst": "tandem/tools/codex-run.ps1",           "kind": "copy", "modes": ["claude-main", "codex-solo"] },
     { "src": "tandem/tools/batch-run.ps1",          "dst": "tandem/tools/batch-run.ps1",           "kind": "copy", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] },
-    { "src": "tandem/tools/claude-run.ps1",         "dst": "tandem/tools/claude-run.ps1",          "kind": "copy", "modes": ["codex-main"] }
+    { "src": "tandem/tools/claude-run.ps1",         "dst": "tandem/tools/claude-run.ps1",          "kind": "copy", "modes": ["codex-main"] },
+
+    { "src": "tandem/design",                       "dst": "tandem/design",                        "kind": "tree", "modes": ["claude-main", "codex-main", "claude-solo", "codex-solo"] }
   ]
 }

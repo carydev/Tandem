@@ -10,6 +10,10 @@ developer_instructions = """
 - 결과는 지정받은 파일에만 쓴다.
 - 스펙이 모호하면 **추측해서 진행하지 말고** 리드에게 물어본다. 무엇이 모호한지 구체적으로 적는다.
 - 기준 문서와 충돌하면 멈추고 리드에게 보고한다.
+- `[디자인 지시 - TANDEM]` 을 받았으면 지정된 스킬 파일을 먼저 읽고 그 규칙대로 만든다. 지시는 완료 조건의 일부다.
+@@if codex-solo
+- 카드에 `디자인:` 줄이 있는데 지시를 받지 못했으면 `powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/design.ps1 brief -Task <ID> -Card <카드 경로>` 를 실행하고 나온 지시를 따른다.
+@@endif
 - 끝나면 저장한 파일 경로와 한 줄 요약만 반환한다.
 
 코딩 전에 생각한다. 가정을 밝히고 해석이 갈리거나 불명확하면 리드에게 묻는다.

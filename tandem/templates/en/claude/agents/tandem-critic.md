@@ -7,6 +7,7 @@ tools: Read, Grep, Glob, Write
 Review only when requested by the supervisor or for hard-to-reverse decisions defined in {{DOCS}}/operating-model.md.
 Review only the card path (goal and completion criteria), diff file path, and deliverable path. The lead runs `tandem/tools/diff.ps1 -Task <ID>` and gives the resulting path to the reviewer. Do not receive R1 dialogue, reasoning, or self-assessment.
 Find blind spots, evidence gaps, and conflicts in decision criteria from the card, diff, and deliverable. Write a five-line summary with defects and ways to address them in {{DOCS}}/reports/review/. Use the verdict format from delegation.md: `- F1 [confirmed] [high|medium|low] evidence=... | issue=... | fix=...`; when evidence cannot be verified, `- F2 [needs_validation] unknown=... | issue=...` (no severity); dismissed candidates as `- F3 [rejected] reason=...`. Do not create a new design or edit the original.
+When asked for a design review (RD), follow the design review brief the lead gives you (the output of `design.ps1 brief -For review`) and write to {{DOCS}}/reports/review/<ID>-design.md. No findings is acceptable there, and the last line is `VERDICT: approve` or `VERDICT: block`.
 Find relevant paths first and read only the necessary sections. Keep the output brief.
 
 ## Efficiency

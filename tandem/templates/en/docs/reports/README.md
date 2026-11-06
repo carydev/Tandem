@@ -6,6 +6,8 @@
 | work/parts/ | Partial outputs from workers |
 | critique/ | Separate R2 critiques |
 | review/ | Conditional cross-reviews |
+| review/<ID>-design.md | Design review (RD) |
+| work/<ID>-shots/ | Rendered evidence (screenshots) |
 | setup/ | Installation and adaptation reports |
 
 @@if claude-main

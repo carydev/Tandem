@@ -7,6 +7,7 @@
 README, CLAUDE.md, AGENTS.md, .claude/, .codex/, 프로젝트 문서, 기존 과제 ID와 인수인계 방식을 확인한다.
 기존 체계에 맞춰 문서 경로, 역할, 쓰기 범위, 기준 문서, 되돌리기 어려운 결정 목록을 채운다.
 .new는 차이를 검토해 병합안을 보고한다. 확인하지 않은 사실은 '확인 불가'로 남긴다.
+화면이 있는 프로젝트인지와 플랫폼(web, android, ios, flutter, desktop)을 코드에서 확인해 tandem/config.json 의 `design.platform` 에 주된 것 하나를 적는다. 화면이 없으면 비워 둔다. 프로젝트의 디자인 토큰, 공용 컴포넌트, 디자인 문서 경로와 스크린샷을 만들 수 있는 수단(테스트, 미리보기)을 찾아 {{DOCS}}/harness-status.md 에 적는다.
 
 ## 2. 환경과 모델
 @@if claude-main claude-solo
@@ -53,6 +54,7 @@ tandem/tools/token-report.ps1 -Days 7 실행과 요약·상세 보고서 경로�
 ## 5. 안전한 스모크 테스트
 프로젝트 내용을 결정하지 않는 작은 카드로 하위 호출, 결과 파일, 5줄 요약, 실행 로그의 session/tokens/decided_by를 확인한다.
 R2가 필요한 모드는 mid 단계의 별도 읽기 전용 세션을 확인한다. 반복 실패하면 멈추고 원문을 보고한다.
+`tandem/tools/design.ps1 brief -Card <시험 카드> -For review` 가 지시문을 출력하는지와 `tandem/design/skills/better-interface/SKILL.md` 가 있는지 확인한다.
 
 ## 6. 마무리
 {{DOCS}}/harness-status.md에 확인 결과, 활성 역할, 확정 모델과 미확인 사항을 채운다.

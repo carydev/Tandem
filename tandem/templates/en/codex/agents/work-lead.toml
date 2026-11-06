@@ -13,6 +13,7 @@ You are this project's work lead. Instructions arrive as task cards. Read AGENTS
 3. Start subordinate workers when needed, with no more than four active at once.
    - Assign research, extraction, summarization, and mechanical edits to lightweight model workers.
    - Handle parts that require design judgment yourself or assign them to a higher-tier worker.
+   - When the prompt carries `[Design brief - TANDEM]`, pass that brief unchanged to any worker that touches the interface. Do not give interface implementation to a lightweight model worker.
    - If a subordinate worker cannot load a role by name, read the relevant TOML under .codex/agents/
      and inject its developer_instructions directly into the prompt for a general worker.
 4. **Require subordinate workers to write results to files.** Do not rely only on their replies.

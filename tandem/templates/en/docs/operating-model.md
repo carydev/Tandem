@@ -2,6 +2,7 @@
 
 The user's language is {{LANG_NAME}}. Write documents and reports in {{LANG_NAME}} as well.
 The sequence is: instruction → G1 confirmation of task definition → card creation → worker execution → review → G2 briefing → update source-of-truth documents after approval.
+Screens and documents people look at also go through a design review (RD) at the review step. The rules are in {{DOCS}}/design.md.
 Fill in the source-of-truth document table during adaptation. If there are none, state that explicitly. Also fill in the list of decisions that are hard to reverse for this project.
 
 @@if claude-main
@@ -25,6 +26,7 @@ Human → Codex top-level lead → workers in .codex/agents.
 | {{DOCS}}/model-routing.md | Lead |
 | {{DOCS}}/log/runs.jsonl | Main: execution wrapper; solo: lead appends per subagent call |
 | {{DOCS}}/harness-status.md | Installation and adaptation session |
+| tandem/design/ | Read-only. Copies of the Interfaces skills; only the install script updates them |
 
 ## Project source-of-truth documents
 | Path | Role |

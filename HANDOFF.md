@@ -11,7 +11,7 @@
 - 저장소: `https://github.com/carydev/Tandem`
 - 소유자: carydev
 - 라이선스: MIT
-- 버전: v1.5 (`VERSION` 파일이 기준. 업데이트 알림이 이 파일을 본다)
+- 버전: v1.10 (`VERSION` 파일이 기준. 업데이트 알림이 이 파일을 본다)
 
 **이 저장소 자체에는 TANDEM이 설치돼 있지 않다.** 여기는 남에게 나눠 줄 템플릿을 담는 곳이다.
 `.gitignore`가 설치 결과물(`docs/tandem/`, `tandem/config.json`, `tandem/manifest.json`)을 막고 있다. 이건 의도된 것이다.
@@ -27,7 +27,8 @@ tandem/
   files.json                 파일 계약: 무엇을 어느 모드에 어디로 놓는가
   templates/ko/, en/         언어별 템플릿 (상대 경로 구조 동일)
     claude/ codex/ docs/ blocks/ settings.json adapt.md
-  tools/*.ps1                설치 대상에 그대로 복사되는 도구 (check, token-report, jev, manifest, diff, review-check, lessons, run-table, board, history, quiet, batch-run, codex-run, claude-run)
+  tools/*.ps1                설치 대상에 그대로 복사되는 도구 (check, token-report, jev, manifest, diff, review-check, lessons, run-table, board, design, history, quiet, batch-run, codex-run, claude-run)
+  design/                    Interfaces 스킬 사본 13개(skills/, 원본 그대로) + LICENSE + SOURCE.md. files.json 의 kind=tree 로 통째 배치
 docs/plan-plugin-distribution.md  보류된 플러그인 배포 계획
 docs/design-v1.1.md          v1.1 설계서 (모드, 렌더링, 지문 업데이트, 훅, Jev, 리포트, 래퍼)
 README.md / README.ko.md     사용자 문서 (영어 기본 / 한국어). 함께 고친다
@@ -78,6 +79,11 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 | **보고 끝 실행 표는 runs.jsonl 에서 `run-table.ps1` 로만 만든다**. 규칙 3(간결 보고)에 예외로 명시해 매 중간·완료 보고에 붙임(위임 없으면 "없음" 표). 총괄·팀장·전달책 자신의 사용량은 표에 넣지 않음(토큰 리포트 몫) | 사용자 요청(2026-10-28, 보고표 이미지 제시). 모델이 표를 직접 쓰면 숫자를 지어내고, 예외를 명시하지 않으면 간결 규칙 때문에 표를 뺀다. 메인 세션 트랜스크립트 병합은 비용 대비 이득이 작아 보류 |
 | **칸반 보드는 정적 HTML + `board-data.js`(JSONP 식) 폴링**, 데이터는 `board.ps1` 만 쓴다(잠금·원자적 쓰기). 작업한 에이전트는 built 까지만, review 판정·test·done·blocked 는 총괄/팀장. 래퍼 모드는 래퍼가 doing·built·review·blocked 자동 | 사용자 요청(2026-10-29). file:// 페이지는 fetch 로 JSON 을 못 읽어 script 재삽입을 씀(서버 불필요). 에이전트가 자기 카드를 완료로 옮기면 자기 판정이 되어 v1.6 발견자≠검증자와 충돌. 래퍼 자동 이동은 에이전트가 잊어도 보드가 어긋나지 않게 하는 안전장치 |
 | **세션 시작·`/clear`·압축 때 히스토리 목차(INDEX, 1,500자)를 훅으로 넣는다. 교훈 파일은 여전히 안 넣는다**. 주제별 히스토리 + 요약 카드 + archive 회전(20개 초과, 원본 보존) + 30일 휴면 접기 + search 10줄. 요약 카드는 `-Next`·`-Decision` 필드로 기계적으로 생성(AI 요약 없음) | 사용자 결정(2026-10-29). "언제든 /clear 해도 주제별로 최근 맥락에서 이어 가기" 요청과 "쌓이면 찾는 데 토큰이 많이 든다" 우려에 대한 대책. 2026-10-14 교훈 미로드 결정과 겹쳐 확인받음 - 목차는 현재 상태 색인이라 허용. claude-mem·Letta(단계별 꺼내 읽기), beads·ai-memory(오래된 것 압축, 원본 보존), planning-with-files(주제별 인계·짧은 목차) 참고 |
+| **디자인 스킬은 사본을 저장소에 넣고(`tandem/design/skills/`, 원본 그대로) 에이전트가 경로로 읽는다.** Claude·Codex 네이티브 스킬로 등록하지 않는다 | 사용자 결정(2026-11-06): 결과물 품질이 토큰 절약보다 우선이고, 탄뎀을 쓰면 스킬이 자동으로 적용돼야 한다. 설치기는 네트워크를 쓰지 않고 지문으로 파일을 추적하므로 사본 동봉이 구조에 맞다. 검수용 스킬 5개는 사용자 호출 전용(`disable-model-invocation`)이라 Skill 도구로는 일꾼이 못 부른다. 경로 읽기는 모든 모드·두 CLI 에서 같고, 사용자가 따로 설치한 사본과 충돌하지 않는다 |
+| **카드의 `디자인:` 줄 하나가 스위치.** 래퍼가 구현 라운드에 지시를 붙이고, 라운드 `RD` 가 검수하고, `design.ps1` 이 판정을 `log/design.jsonl` 에 쓰고, 보드가 approve 전 완료 이동을 거부한다 | 문서 규칙만으로는 안 지켜진다(v1.4·v1.5 교훈). 줄이 빠진 카드는 바뀐 화면 파일로 잡아 `design=unmarked` 로 알린다. 판정 기록은 runs.jsonl 과 분리해 실행 표·토큰 보고서에 영향이 없다 |
+| RD 는 R2 와 별도 라운드. 최소 3개 규칙 미적용. 판정은 `design.ps1 check` 가 계산한다(검수자가 approve 라고 써도 introduced·regression [높음] 이 있으면 block, VERDICT 줄이 없으면 invalid) | 스킬 원칙이 "지적이 없으면 없는 것이 결과"다. R2 는 정확성, RD 는 화면만 본다. 검수자 선언만 믿지 않는다 |
+| 스킬은 웹 전용이라 네이티브는 `design-platforms.md` 대응표로 옮긴다. API 이름은 출발점으로만 적고 프로젝트 버전에서 확인하게 했다 | 사용자 요구: 안드로이드 앱 UI 에도 적용. 원문에 Android·iOS 언급이 없다. API 는 버전마다 달라 단정하면 틀린 코드를 낳는다 |
+| 후속 호출 세션 이어쓰기에서 R2·RD 기록은 건너뛴다 | 실호출(2026-11-06)에서 R3 가 같은 모델의 RD 검수자 세션을 이어 썼다. 구현과 검수가 한 세션에 섞이면 발견자≠검증자가 깨진다 |
 
 ## 검증된 것 (v1.1, 2026-10-13, Windows PowerShell 5.1.19041)
 
@@ -156,7 +162,19 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - `quiet.ps1`: 3,006줄 실패 출력 → 약 25줄(반복 줄 횟수 묶음), 종료 코드 그대로 반환, `-Shell powershell`, cp949 출력 디코딩, 로그 30개 유지
 - PS 5.1 함정 3건: `-File` 실행에서 맨 끝 인자 `-` 는 스크립트가 아무 출력 없이 종료 코드 2 → 결정 없음 표시는 `없음`/`none`. 변수 `$files` 가 파라미터 `$Files`(string[])와 같은 변수라 FileInfo 가 문자열로 변함. 함수 이름 `Git` 이 `git` 실행 파일보다 먼저 잡혀 자기 자신을 호출. 2차원 배열 `$d[($i-1),$j]` 파싱 실패
 
+## 검증된 것 (v1.10, 2026-11-06)
+
+- 자동 검증 131항목 통과(`.work/v1.10/test.ps1`, 가짜 `codex.cmd`·`claude.cmd`): 설치 8조합(잔존 토큰 0, BOM 0, en 한글 0, `tandem/design/` 66개, config `design` 기본값, 재실행 멱등), `design.ps1` 5개 명령, 보드 관문(missing·block·invalid 거부, approve 통과, 카드에서 줄을 빼면 값 정리), 래퍼(구현 라운드 지시 첨부, RD 읽기 전용 강제·변경분 첨부·판정 기록, `design=unmarked`, R2 무변경, R3 가 구현 세션을 이어 씀), v1.9 설치본 업그레이드(`.new` 0), 모드 전환, 원본에서 빠진 파일 제거, `-Plan` 무흔적
+- 실제 호출(Claude Code 2.1.318, sonnet, codex-main 임시 설치본, 작은 웹 화면): 결함 6종을 심은 변경에 RD → 2분, block, confirmed 12(높음 8)로 전부 근거 줄과 함께 지적. 같은 과제를 R1 로 구현 → 일꾼이 스킬 6개를 읽고 스크린샷을 남김, 요약에 `design=web review=missing`. RD → block(높음 1: 서버 없이 "삭제했습니다" 표시), R3 → RD approve → `board.ps1 move -To done` 통과. 5회 호출 10분 25초, 비캐시 66k·캐시 2.3M 토큰
+- 이 실호출로 claude-run 의 `--resume` 이어쓰기가 실제로 동작함을 처음 확인(`resumed=true`). 단, 그때 이어 쓴 세션이 RD 검수자 세션이어서 위 결정대로 고쳤다
+- 보드 화면: 헤드리스 Edge 로 넓은 창(7칸)과 좁은 창(520px, 2칸 줄바꿈) 캡처 확인. 색 대비는 계산으로 확인(라이트 최저 4.67, 다크 최저 5.35)
+- PS 5.1 함정: `[string](@() | Select-Object -First 1)` 은 빈 문자열이 아니라 `$null`. 함수 인자 `-To` 는 `$tool` 같은 파라미터에 접두사로 묶인다. `powershell -File x.ps1 ... -` 는 "name 인수" 오류. 이 환경의 Bash 는 heredoc 밖에서도 `\\` 를 `\` 로 줄인다
+
 ## 검증 안 된 것 (남은 일)
+
+- **v1.10 은 커밋·태그·푸시·릴리스를 하지 않았다.** 사용자 지시를 기다린다. 원격 한 줄 설치 검증도 그 뒤에 한다
+- v1.10: Codex 실제 호출로 RD·구현 지시 확인(이 PC 의 현재 PATH 에 `codex.cmd` 가 없어 가짜 CLI 로만 확인). 솔로 모드에서 일꾼이 `design.ps1 brief` 를 스스로 실행하는지. Android·iOS 프로젝트 실사용(대응표의 API 이름은 실제 빌드로 확인하지 않았다). 라이트 모드 보드 캡처(이 PC 는 다크 모드라 계산만 함)
+- 스킬 사본 갱신 절차: 원본을 받아 `skills/` 에서 `teardown` 을 뺀 폴더를 `tandem/design/skills/` 에 덮어쓰고(줄바꿈 LF), `LICENSE` 를 복사하고, `SOURCE.md` 의 버전·커밋을 고친다. 설치기는 사용자가 안 고친 파일만 교체한다
 
 - 래퍼(`codex-run`/`claude-run`) R2 뒤 자동 `review-check` 실행과 `findings` 기록을 실제 호출로 확인 (코드 경로만 파서 검증)
 - 이 PC 에서 PowerShell 프로세스마다 `Get-UICulture` 가 ko-KR/en-US 로 다르게 잡힌다 (2026-10-27, 같은 명령 연속 실행에서 메시지 언어가 바뀜). 도구들은 config.json 의 lang 을 우선 쓰므로 설치본에서는 영향 없음. 원인 미확인
@@ -221,6 +239,9 @@ PUBLISH.md / QUICKSTART.txt / LICENSE / HANDOFF.md
 - [x] **v1.7** (2026-10-28): 보고 끝 실행 표 - `run-table.ps1`, runs.jsonl `kind`·`agent`·`title`·`duration_s`, 규칙 3 예외로 보고마다 표 첨부, 카드 첫 줄 `# <ID> <제목>`
 - [x] **v1.8** (2026-10-29): 칸반 보드 - `board.ps1`, `docs/tandem/board/index.html`(3초 폴링), 래퍼 자동 이동, 에이전트는 built 까지만·판정 칸은 총괄/팀장
 - [x] **v1.9** (2026-10-29): 작업 히스토리(`history.ps1`, 주제별 기록·요약 카드·archive 회전·이어가기 주의) + `/clear` 이어가기 훅 + 출력 줄이기(`quiet.ps1`)
+- [x] **v1.10** (2026-11-06): 디자인 품질 계층 - Interfaces 스킬 사본(`tandem/design/`), 카드 `디자인:` 줄, `design.ps1`, 라운드 RD, 보드 완료 관문, `design.md`·`design-platforms.md`, 보드 화면 수정, 설치기 `tree`, 래퍼 수정 3건. **미커밋**
+      - Codex 카드 없이 Claude 가 직접 구현(설치기·래퍼·템플릿 ko/en 이 얽혀 있다). 작업 스크립트와 시험: `.work/v1.10/`
+      - 계기: 사용자가 jakub.kr/skills 조사 요청 → "품질이 토큰보다 우선, 탄뎀이 자동으로 쓰게, 안드로이드 앱 UI 에도"
 - [ ] **보류** 플러그인 방식 배포 (Claude `/plugin`, Codex `codex plugin`) - 한 줄 설치는 공식 마켓플레이스 심사가 필요해 보류. 계획: `docs/plan-plugin-distribution.md`
 
 ## 지키면 좋을 것

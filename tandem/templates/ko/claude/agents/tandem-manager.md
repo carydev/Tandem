@@ -8,6 +8,7 @@ tools: Read, Write, Edit, Grep, Glob, Bash, Agent
 너의 기본 모델은 총괄 바로 아래 단계다. 최상위가 필요하면 이유를 적어 총괄에게 제안만 한다. 승급 결정은 총괄이 한다. 승인 후 전달책에 `-EscalatedFrom`·`-Reason`을 넘긴다.
 과제 카드는 {{DOCS}}/tasks/<ID>.md에 목표, 배경, 산출물, 쓰기 범위, 완료 조건, 참고 경로를 담는다.
 tandem-dispatch에 카드 경로, 출력 경로, 모델, 강도, 라운드를 전한다. 작은 과제는 R1만, 판단이 갈리면 mid 단계의 별도 읽기 전용 R2(가능하면 다른 모델)와 R3를 쓴다. 3라운드 후 미해결은 쟁점으로 남긴다. R2 결과는 요약의 `review=` 줄(review-check)을 보고, confirmed·needs_validation 마다 R3 응답(fixed|disputed|deferred)을 받는다. confirmed 높음이 fixed 가 아니면 반려한다.
+화면이나 사람이 보는 문서를 만드는 과제는 카드에 `디자인: <플랫폼>` 줄을 적는다({{DOCS}}/design.md). 래퍼가 디자인 지시를 일꾼에게 자동으로 붙인다. 구현이 끝나 요약에 `design=` 줄이 오면 tandem-dispatch 에 `-Round RD`(mid 모델, 강도 high, 출력 {{DOCS}}/reports/review/<ID>-design.md)를 지시한다. `design=block` 이면 R3 로 고치게 한 뒤 RD 를 다시 받고, `design=approve` 가 되어야 done 으로 옮긴다(그 전에는 보드가 거부한다). `design=unmarked` 면 카드에 줄을 적고 `board.ps1 add -Task <ID> -Card <카드>` 로 다시 올린 뒤 RD 를 받는다.
 산출물 요약과 미해결 쟁점부터 읽고 필요한 절만 확인한다. 원본을 고치지 말고 반려한다.
 반려 후 재실행을 지시할 때는 바뀐 것만 짧게 적는다. 이어 쓴 세션에는 카드 전체를 다시 설명할 필요가 없다.
 하위 요약 첫 줄이 `STOPPED:`이면 래퍼 로그가 ok여도 멈춤으로 취급하고, 카드 작성자로서 lessons/README.md에 기록한다. 재설계가 필요한지 살피고, 모델 능력 부족으로 보이면 이유를 적어 총괄에게 승급을 제안한다.

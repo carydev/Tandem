@@ -1,6 +1,6 @@
 ﻿param(
     [Parameter(Position=0)][string]$Command='list',
-    [string[]]$Task,[string]$Title,[string]$Card,[string]$To,[string]$By,[string]$Note,[switch]$Quiet
+    [string[]]$Task,[string]$Title,[string]$Card,[string]$To,[string]$By,[string]$Note,[string]$Design,[switch]$Quiet
 )
 # Kanban board: <docs>/board/board.json (+ board-data.js for board/index.html). Moves are one short call; viewing costs no tokens.
 try { [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false) } catch {}
@@ -51,6 +51,19 @@ function RunStats($ids) {
     }
     return $stats
 }
+function DesignVerdicts {
+    # Latest design verdict per task from <docs>/log/design.jsonl. design.ps1 is the only writer of that file.
+    $map = @{}
+    $log = Join-Path $docs 'log/design.jsonl'
+    if (!(Test-Path -LiteralPath $log)) { return $map }
+    foreach ($line in [IO.File]::ReadLines($log,[Text.Encoding]::UTF8)) {
+        if (!$line.Contains('"task"')) { continue }
+        try { $r = $line | ConvertFrom-Json } catch { continue }
+        if ($r.task -and $r.verdict) { $map[([string]$r.task).ToLowerInvariant()] = [string]$r.verdict }
+    }
+    return $map
+}
+function SetProp($o,[string]$name,$value) { $o | Add-Member -NotePropertyName $name -NotePropertyValue $value -Force }
 $lang = 'ko'
 try {
     $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
@@ -62,11 +75,11 @@ try {
     $dir = Join-Path $docs 'board'
     $jsonPath = Join-Path $dir 'board.json'; $jsPath = Join-Path $dir 'board-data.js'; $htmlPath = Join-Path $dir 'index.html'
     $msg = @{
-        ko = @{ usage='사용법: board.ps1 add|move|note|remove|list|sync|open -Task <ID[,ID]> [-To todo|doing|built|review|test|done|blocked] [-Title ..] [-Card ..] [-By ..] [-Note ..]'
-                task='-Task 가 필요합니다'; to='-To 값이 올바르지 않습니다: {0}'; nocard='보드에 없는 과제: {0}'; empty='보드가 비어 있습니다'; nohtml='보드 화면 파일이 없습니다: {0}'
+        ko = @{ usage='사용법: board.ps1 add|move|note|remove|list|sync|open -Task <ID[,ID]> [-To todo|doing|built|review|test|done|blocked] [-Title ..] [-Card ..] [-By ..] [-Note ..] [-Design <platform|none>]'
+                task='-Task 가 필요합니다'; to='-To 값이 올바르지 않습니다: {0}'; nocard='보드에 없는 과제: {0}'; empty='보드가 비어 있습니다'; nohtml='보드 화면 파일이 없습니다: {0}'; gate='디자인 검수 미통과({1}): {0} 은 완료로 옮기지 않았습니다. design.ps1 status -Task {0} 로 확인하고 디자인 검수(RD)를 받습니다'
                 names=@{todo='할 일';doing='진행중';built='작업완료';review='리뷰';test='테스트';done='완료';blocked='막힘'} }
-        en = @{ usage='Usage: board.ps1 add|move|note|remove|list|sync|open -Task <ID[,ID]> [-To todo|doing|built|review|test|done|blocked] [-Title ..] [-Card ..] [-By ..] [-Note ..]'
-                task='-Task is required'; to='Invalid -To value: {0}'; nocard='Task not on the board: {0}'; empty='The board is empty'; nohtml='Board page not found: {0}'
+        en = @{ usage='Usage: board.ps1 add|move|note|remove|list|sync|open -Task <ID[,ID]> [-To todo|doing|built|review|test|done|blocked] [-Title ..] [-Card ..] [-By ..] [-Note ..] [-Design <platform|none>]'
+                task='-Task is required'; to='Invalid -To value: {0}'; nocard='Task not on the board: {0}'; empty='The board is empty'; nohtml='Board page not found: {0}'; gate='Design review not passed ({1}): {0} was not moved to done. Check with design.ps1 status -Task {0} and get a design review (RD)'
                 names=@{todo='To do';doing='In progress';built='Built';review='Review';test='Test';done='Done';blocked='Blocked'} }
     }[$lang]
     $Command = $Command.ToLowerInvariant()
@@ -80,6 +93,16 @@ try {
     if ($Command -eq 'move') {
         $To = ([string]$To).ToLowerInvariant(); if ($alias.ContainsKey($To)) { $To = $alias[$To] }
         if ($To -notin $columns) { Write-Output ($msg.to -f $To); exit 0 }
+    }
+    # A card's design platform comes from its "Design:" line (design.ps1 platform) or from -Design. Design cards need a passing design review before done.
+    $designValue = $null
+    if ($Command -in @('add','move')) {
+        if ($PSBoundParameters.ContainsKey('Design')) { $designValue = ([string]$Design).Trim().ToLowerInvariant(); if ($designValue -in @('none','no','off','-','없음')) { $designValue = '' } }
+        elseif ($Card) { try { $found = @(& (Join-Path $PSScriptRoot 'design.ps1') platform -Card $Card); $designValue = if ($found.Count) { [string]$found[0] } else { '' } } catch { $designValue = $null } }
+    }
+    $designGate = $true
+    if ($config -and $config.PSObject.Properties['design'] -and $config.design) {
+        if (($config.design.PSObject.Properties['enabled'] -and $config.design.enabled -eq $false) -or ($config.design.PSObject.Properties['gate'] -and $config.design.gate -eq $false)) { $designGate = $false }
     }
     [IO.Directory]::CreateDirectory($dir) | Out-Null
     $sha = [Security.Cryptography.SHA1]::Create()
@@ -95,7 +118,7 @@ try {
         $rev = if ($board -and (Has $board 'rev')) { [long]$board.rev } else { 0 }
         function Find([string]$id) { foreach ($c in $cards) { if ([string]$c.id -ieq $id) { return $c } }; return $null }
         function NewCard([string]$id,[string]$title) {
-            $c = [pscustomobject][ordered]@{id=$id;title=$title;column='todo';by=$null;note=$null;created=(Now);updated=(Now);history=@();stats=$null}
+            $c = [pscustomobject][ordered]@{id=$id;title=$title;column='todo';by=$null;note=$null;created=(Now);updated=(Now);history=@();stats=$null;design=$null;design_review=$null}
             $cards.Add($c); return $c
         }
         function Push($c,[string]$col) {
@@ -104,6 +127,7 @@ try {
             $c.history = $h
         }
         $changed = $false
+        $designMap = DesignVerdicts
         if ($Command -eq 'list') {
             $show = New-Object System.Collections.Generic.List[object]
             foreach ($c in $cards) { if (!$ids.Count -or ($ids -icontains [string]$c.id)) { $show.Add($c) } }
@@ -111,7 +135,7 @@ try {
             foreach ($col in $columns) {
                 $inCol = @($show | Where-Object { $_.column -eq $col }); if (!$inCol.Count) { continue }
                 Write-Output ("$($msg.names[$col]) ($($inCol.Count))")
-                foreach ($c in $inCol) { Write-Output (("- $($c.id) $($c.title)").TrimEnd() + $(if ($c.by) { " [$($c.by)]" } else { '' })) }
+                foreach ($c in $inCol) { Write-Output (("- $($c.id) $($c.title)").TrimEnd() + $(if ($c.by) { " [$($c.by)]" } else { '' }) + $(if ((Has $c 'design') -and $c.design) { " <design $($c.design): $(if ($designMap[([string]$c.id).ToLowerInvariant()]) { $designMap[([string]$c.id).ToLowerInvariant()] } else { 'missing' })>" } else { '' })) }
             }
             exit 0
         }
@@ -122,10 +146,16 @@ try {
                 'add' {
                     if (!$c) { $c = NewCard $id $title; Push $c 'todo' } elseif ($title) { $c.title = $title; $c.updated = (Now) }
                     if ($Note) { $c.note = $Note }
+                    if ($null -ne $designValue) { SetProp $c 'design' $(if ($designValue) {$designValue} else {$null}) }
                     $changed = $true
                 }
                 'move' {
                     if (!$c) { $c = NewCard $id $title } elseif ($title -and !$c.title) { $c.title = $title }
+                    if ($null -ne $designValue) { SetProp $c 'design' $(if ($designValue) {$designValue} else {$null}); $changed = $true }
+                    if ($To -eq 'done' -and $designGate -and (Has $c 'design') -and $c.design) {
+                        $verdictNow = $designMap[([string]$c.id).ToLowerInvariant()]
+                        if ($verdictNow -ne 'approve') { Write-Output ($msg.gate -f $c.id,$(if ($verdictNow) {$verdictNow} else {'missing'})); $changed = $true; continue }
+                    }
                     if ($c.column -ne $To) { $c.column = $To; Push $c $To }
                     $c.by = $(if ($By) {$By} else {$null}); $c.updated = (Now)
                     if ($PSBoundParameters.ContainsKey('Note')) { $c.note = $(if ($Note) {$Note} else {$null}) }
@@ -144,6 +174,7 @@ try {
         if ($changed) {
             $stats = RunStats @($cards | ForEach-Object { [string]$_.id })
             foreach ($c in $cards) { $c.stats = $(if ($stats.ContainsKey([string]$c.id)) { [pscustomobject]$stats[[string]$c.id] } else { $null }) }
+            foreach ($c in $cards) { SetProp $c 'design_review' $(if ((Has $c 'design') -and $c.design) { $designMap[([string]$c.id).ToLowerInvariant()] } else { $null }) }
             $project = Split-Path $root -Leaf
             $modeName = if ($config) { [string]$config.mode } else { '' }
             $stamp = Now; $nextRev = $rev + 1; $cardArray = $cards.ToArray()

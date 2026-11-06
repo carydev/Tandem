@@ -1,4 +1,4 @@
-﻿param([string]$Task,[ValidateSet('R1','R2','R3','single')][string]$Round='single',[string]$Card,[string]$Out,[string]$Model,[string]$Effort='low',[ValidateSet('workspace-write','read-only')][string]$Sandbox='workspace-write',[string]$DecidedBy='table',[string]$EscalatedFrom,[string]$Reason,[string]$Prompt,[switch]$NewSession,[string]$Wait,[int]$WaitSeconds=540,[string]$RunnerState,[string]$Agent)
+﻿param([string]$Task,[ValidateSet('R1','R2','R3','RD','single')][string]$Round='single',[string]$Card,[string]$Out,[string]$Model,[string]$Effort='low',[ValidateSet('workspace-write','read-only')][string]$Sandbox='workspace-write',[string]$DecidedBy='table',[string]$EscalatedFrom,[string]$Reason,[string]$Prompt,[switch]$NewSession,[string]$Wait,[int]$WaitSeconds=540,[string]$RunnerState,[string]$Agent)
 try { [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false) } catch {}  # UTF-8 stdout: PS 5.1 defaults to the OEM code page (cp949 on Korean Windows), which garbles non-ASCII output read by Bash/Claude
 $ErrorActionPreference='Stop'
 $utf8=[Text.UTF8Encoding]::new($false)
@@ -33,6 +33,7 @@ function Summary($state) {
     if ($s.summary) { $s.summary -split "`r?`n" | Select-Object -Last 5 | ForEach-Object { Write-Output $_ } }
     Write-Output "session=$($s.session) resumed=$($s.resumed.ToString().ToLower()) tokens=$($s.tokens.input)/$($s.tokens.cached)/$($s.tokens.output)"
     if ($s.review) { Write-Output "review=$($s.review)" }
+    if ($s.design) { Write-Output ([string]$s.design) }
 }
 function WaitDone([string]$path,[int]$seconds) {
     $until=[datetime]::UtcNow.AddSeconds([Math]::Max(0,[Math]::Min(540,$seconds)))
@@ -71,7 +72,7 @@ try {
                 $prior=if ($resumed -and $s.prior_total) {[long]$s.prior_total.$key} else {0}
                 $tokens[$key]=[Math]::Max(0,([long]$threadTotal[$key]-$prior))
             }
-            if ($s.sandbox -eq 'read-only' -and $exit -eq 0 -and (Test-Path -LiteralPath $s.last)) { [IO.File]::WriteAllText($s.out,[IO.File]::ReadAllText($s.last,[Text.Encoding]::UTF8),$utf8) }
+            if ($s.sandbox -eq 'read-only' -and $exit -eq 0 -and (Test-Path -LiteralPath $s.last)) { [IO.Directory]::CreateDirectory((Split-Path -Parent $s.out)) | Out-Null; [IO.File]::WriteAllText($s.out,[IO.File]::ReadAllText($s.last,[Text.Encoding]::UTF8),$utf8) }
         } catch { $note=$_.Exception.Message }
         $exists=Test-Path -LiteralPath $s.out -PathType Leaf
         $last=if (Test-Path -LiteralPath $s.last) {[IO.File]::ReadAllText($s.last,[Text.Encoding]::UTF8)} else {''}
@@ -85,8 +86,22 @@ try {
             try { $review=[string](@(& (Join-Path $PSScriptRoot 'review-check.ps1') -Review $s.out) | Select-Object -First 1) } catch { $review='' }
             if ($review -match 'confirmed=(\d+) needs_validation=(\d+) rejected=(\d+)') { $findings=@{confirmed=[int]$matches[1];needs_validation=[int]$matches[2];rejected=[int]$matches[3]} }
         }
+        # Design layer: RD records the design verdict; after a build round, say when a design review is still owed or the card looks like an unmarked interface task.
+        $design=''
+        $designTool=Join-Path $PSScriptRoot 'design.ps1'
+        if (Test-Path -LiteralPath $designTool) {
+            try {
+                if ($s.round -eq 'RD' -and $exists) {
+                    $design=[string](@(& $designTool check -Task $s.task -Review $s.out) | Select-Object -First 1)
+                    if ($design -match 'confirmed=(\d+) high=\d+ needs_validation=(\d+) rejected=(\d+)') { $findings=@{confirmed=[int]$matches[1];needs_validation=[int]$matches[2];rejected=[int]$matches[3]} }
+                } elseif ($result -eq 'ok' -and $s.round -notin @('R2','RD')) {
+                    $design=[string](@(& $designTool status -Task $s.task -Card $s.card) | Select-Object -First 1)
+                    if ($design -notmatch '^design=unmarked' -and $design -notmatch 'review=(missing|block|invalid)') { $design='' }
+                }
+            } catch { $design='' }
+        }
         $duration=$null; if ($s.started) { try { $duration=[int]([datetime]::Now-[datetime]::Parse([string]$s.started,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind)).TotalSeconds } catch {} }
-        $record=@{ts=[datetime]::Now.ToString('o');kind='codex-run';agent=$(if ($s.agent) {$s.agent} else {$null});title=$(if ($s.title) {$s.title} else {$null});duration_s=$duration;task=$s.task;round=$s.round;model=$s.model;effort=$s.effort;result=$result;escalated_from=$(if ($s.escalated_from) {$s.escalated_from} else {$null});reason=$(if ($s.reason) {$s.reason} else {$null});workers=$null;out=(Relative $s.out $root);session=$session;resumed=$resumed;tokens=$tokens;thread_total=$threadTotal;findings=$findings;decided_by=$s.decided_by;note=$note}
+        $record=@{ts=[datetime]::Now.ToString('o');kind='codex-run';agent=$(if ($s.agent) {$s.agent} else {$null});title=$(if ($s.title) {$s.title} else {$null});duration_s=$duration;task=$s.task;round=$s.round;model=$s.model;effort=$s.effort;result=$result;escalated_from=$(if ($s.escalated_from) {$s.escalated_from} else {$null});reason=$(if ($s.reason) {$s.reason} else {$null});workers=$null;out=(Relative $s.out $root);session=$session;resumed=$resumed;tokens=$tokens;thread_total=$threadTotal;findings=$findings;design=$(if ($design) {$design} else {$null});decided_by=$s.decided_by;note=$note}
         $log=Join-Path $s.docs 'log/runs.jsonl'; [IO.Directory]::CreateDirectory((Split-Path $log)) | Out-Null
         [IO.File]::AppendAllText($log,($record | ConvertTo-Json -Compress -Depth 8)+"`n",$utf8)
         $boardTool=Join-Path $PSScriptRoot 'board.ps1'
@@ -94,14 +109,14 @@ try {
             # Wrapper moves only doing/built/blocked; review verdicts, test and done stay with the lead.
             try {
                 if ($result -eq 'stopped') { & $boardTool move -Task $s.task -To blocked -By $s.agent -Note (@($lines)[0]) -Quiet | Out-Null }
-                elseif ($result -eq 'ok' -and $s.round -ne 'R2') { & $boardTool move -Task $s.task -To built -By $s.agent -Note '' -Quiet | Out-Null }
-                elseif ($result -eq 'ok') { & $boardTool note -Task $s.task -Note $review -Quiet | Out-Null }
+                elseif ($result -eq 'ok' -and $s.round -notin @('R2','RD')) { & $boardTool move -Task $s.task -To built -By $s.agent -Note '' -Quiet | Out-Null }
+                elseif ($result -eq 'ok') { & $boardTool note -Task $s.task -Note $(if ($s.round -eq 'RD') {$design} else {$review}) -Quiet | Out-Null }
                 else { & $boardTool note -Task $s.task -Note ('fail: '+$note) -Quiet | Out-Null }
             } catch {}
         }
         $historyTool=Join-Path $PSScriptRoot 'history.ps1'
         if (Test-Path -LiteralPath $historyTool) { try { & $historyTool run -Task $s.task -Line ("$($s.round) $result $($s.agent) "+$(if ($null -ne $duration) {"$($duration)s"} else {''})) -Quiet | Out-Null } catch {} }
-        $done=@{result=$result;exit=$exit;out_exists=$exists;summary=$summary;session=$session;resumed=$resumed;tokens=$tokens;review=$review}
+        $done=@{result=$result;exit=$exit;out_exists=$exists;summary=$summary;session=$session;resumed=$resumed;tokens=$tokens;review=$review;design=$design}
         [IO.File]::WriteAllText($RunnerState+'.done.json',($done | ConvertTo-Json -Compress -Depth 8),$utf8)
         exit 0
     }
@@ -114,6 +129,7 @@ try {
     if ($config.models.codex_top -and $Model -ieq $config.models.codex_top) {
         if ($Reason -cnotmatch '^[^\r\n"]{1,200}$' -or (($EscalatedFrom -cnotmatch '^[A-Za-z0-9._:/-]+$') -and $DecidedBy -cne 'human')) { Write-Output "status=fail $($m.top)"; exit 0 }
     }
+    if ($Round -eq 'RD' -and !$PSBoundParameters.ContainsKey('Sandbox')) { $Sandbox='read-only' }  # a design review never edits files
     [IO.Directory]::CreateDirectory($stateDir) | Out-Null
     $safe=(($Task+'-'+$Round) -replace '[^A-Za-z0-9_-]','_')
     $mutex=[Threading.Mutex]::new($false,'Local\Tandem-codex-'+[Convert]::ToBase64String([Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($root+'|'+$safe))).Substring(0,32).Replace('/','_'))
@@ -128,7 +144,7 @@ try {
         $scope=([regex]::Match($cardText,'(?ms)^##\s*(쓰기 범위|Write scope)[^\r\n]*\r?\n(.*?)(?=^##\s|\z)')).Groups[2].Value.Trim()
         $instruction=$m.instruction.Replace('{0}',$cardFull).Replace('{1}',$outFull).Replace('{2}',$scope).Replace('{3}',[string]$Prompt).Replace('{4}',$cardText).Replace('`n',"`n")
         if ($EscalatedFrom) { $instruction+="`n"+$(if ($config.lang -eq 'ko') {"승급: $EscalatedFrom -> $Model. 이유: $Reason"} else {"Escalated: $EscalatedFrom -> $Model. Reason: $Reason"}) }
-        if ($Round -eq 'R2') {
+        if ($Round -in @('R2','RD')) {
             $diffPath=''
             try {
                 Push-Location $root
@@ -137,23 +153,28 @@ try {
             } catch { $diffPath='' }
             $instruction+="`n"+$(if ($diffPath) { $m.diff+$diffPath } else { $m.noDiff })+"`n"
         }
+        # Design cards ("Design: <platform>") get the design brief appended automatically: build rounds read the skills before implementing, RD reviews against them.
+        $designTool=Join-Path $PSScriptRoot 'design.ps1'
+        if ($Round -ne 'R2' -and (Test-Path -LiteralPath $designTool)) {
+            try { $brief=(@(& $designTool brief -Task $Task -Card $cardFull -For $(if ($Round -eq 'RD') {'review'} else {'build'})) -join "`n").Trim(); if ($brief) { $instruction+="`n"+$brief+"`n" } } catch {}
+        }
         if ($Sandbox -eq 'read-only') { $instruction+=$m.readonly } else { $instruction+=$m.writable }
         $stem=Join-Path $stateDir $id; $statePath=$stem+'.state.json'
         [IO.File]::WriteAllText($stem+'.prompt',$instruction,$utf8)
         $docs=Join-Path $root $config.docs_root
         $resumeSession=''; $priorTotal=$null
         $log=Join-Path $docs 'log/runs.jsonl'
-        if (!$NewSession -and $Round -ne 'R2' -and !$EscalatedFrom -and (Test-Path -LiteralPath $log)) {
+        if (!$NewSession -and $Round -notin @('R2','RD') -and !$EscalatedFrom -and (Test-Path -LiteralPath $log)) {
             foreach ($line in [IO.File]::ReadLines($log)) {
-                try { $entry=$line | ConvertFrom-Json; if ($entry.task -ceq $Task -and $entry.model -ieq $Model -and $entry.session) { $resumeSession=[string]$entry.session; $priorTotal=if ($entry.thread_total) {$entry.thread_total} else {$entry.tokens} } } catch {}
+                try { $entry=$line | ConvertFrom-Json; if ($entry.task -ceq $Task -and $entry.model -ieq $Model -and $entry.session -and $entry.round -notin @('R2','RD')) { $resumeSession=[string]$entry.session; $priorTotal=if ($entry.thread_total) {$entry.thread_total} else {$entry.tokens} } } catch {}
             }
         }
         $title=([regex]::Match($cardText,'(?m)^#\s+(.+)$')).Groups[1].Value.Trim(); if ($title.StartsWith($Task)) { $title=$title.Substring($Task.Length).TrimStart(' ',':','-',[char]0x2014,[char]0x00B7) }; if ($title.Length -gt 60) { $title=$title.Substring(0,60) }
-        $agentName=if ($Agent) {$Agent} else {$(if ($Round -eq 'R2') {'codex-reviewer'} else {'codex-lead'})}
-        $s=@{id=$id;key=$safe;task=$Task;agent=$agentName;title=$title;started=[datetime]::Now.ToString('o');round=$Round;model=$Model;effort=$Effort;sandbox=$Sandbox;decided_by=$DecidedBy;escalated_from=$EscalatedFrom;reason=$Reason;out=$outFull;docs=$docs;prompt=$stem+'.prompt';last=$stem+'.txt';jsonl=$stem+'.jsonl';err=$stem+'.err';resume_session=$resumeSession;prior_total=$priorTotal}
+        $agentName=if ($Agent) {$Agent} else {$(if ($Round -eq 'R2') {'codex-reviewer'} elseif ($Round -eq 'RD') {'codex-design-reviewer'} else {'codex-lead'})}
+        $s=@{id=$id;key=$safe;task=$Task;agent=$agentName;title=$title;started=[datetime]::Now.ToString('o');round=$Round;model=$Model;effort=$Effort;sandbox=$Sandbox;decided_by=$DecidedBy;escalated_from=$EscalatedFrom;reason=$Reason;out=$outFull;card=$cardFull;docs=$docs;prompt=$stem+'.prompt';last=$stem+'.txt';jsonl=$stem+'.jsonl';err=$stem+'.err';resume_session=$resumeSession;prior_total=$priorTotal}
         [IO.File]::WriteAllText($statePath,($s | ConvertTo-Json -Compress),$utf8)
         $boardTool=Join-Path $PSScriptRoot 'board.ps1'
-        if (Test-Path -LiteralPath $boardTool) { try { & $boardTool move -Task $Task -To $(if ($Round -eq 'R2') {'review'} else {'doing'}) -By $agentName -Title $title -Quiet | Out-Null } catch {} }
+        if (Test-Path -LiteralPath $boardTool) { try { & $boardTool move -Task $Task -To $(if ($Round -in @('R2','RD')) {'review'} else {'doing'}) -By $agentName -Title $title -Card $cardFull -Quiet | Out-Null } catch {} }
         $runner=Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Quote $PSCommandPath),'-RunnerState',(Quote $statePath)) -WorkingDirectory $root -PassThru -WindowStyle Hidden
     } finally { $mutex.ReleaseMutex(); $mutex.Dispose() }
     WaitDone $statePath $WaitSeconds

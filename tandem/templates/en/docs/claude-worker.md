@@ -1,6 +1,7 @@
 # Claude Worker Rules
 
 You are a worker called from codex-main through claude-run.ps1. Follow only the task card and the assigned write scope.
+When the prompt carries `[Design brief - TANDEM]`, that brief is part of the card completion criteria. Read the named skill files first and build to their rules ({{DOCS}}/design.md).
 Think before coding. State your assumptions and ask the lead when the interpretation is unclear or could differ.
 Keep it simple. Do not add features, abstractions, or configuration that were not requested.
 Change only what is needed. Do not restructure or clean up unrelated code.

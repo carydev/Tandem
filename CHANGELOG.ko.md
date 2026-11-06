@@ -2,6 +2,19 @@
 
 [English](CHANGELOG.md) | **한국어**
 
+## v1.10 (2026-11-06)
+
+- 디자인 품질: Interfaces 스킬([jakubkrehel/skills](https://github.com/jakubkrehel/skills) v1.17.0, MIT) 사본 13개를 `tandem/design/skills/` 에 함께 설치한다. 에이전트가 경로로 읽으므로 따로 설치하거나 불러 줄 필요가 없다. 모든 모드에 들어간다.
+- 카드 한 줄로 자동 적용: `디자인: <web|android|ios|flutter|desktop|doc>`. 래퍼가 구현 라운드 프롬프트에 스킬 읽기 지시를 붙이고(솔로 모드는 일꾼이 `design.ps1 brief` 를 실행), 끝나면 요약의 `design=` 줄로 남은 일을 알린다. 줄 없는 카드에서 화면 파일이 바뀌면 `design=unmarked` 로 알린다.
+- 디자인 검수 라운드 `RD`: 읽기 전용 새 세션에서 변경분을 받아 `better-interface` 절차와 `interface-review` 분류로 검수한다. 마지막 줄 `VERDICT: approve` 또는 `VERDICT: block`. 이번 변경이 만든 최고 심각도 지적이 있으면 검수자가 approve 라고 써도 block 이다. 지적 최소 3개 규칙은 적용하지 않는다. `design.ps1 check` 가 `log/design.jsonl` 에 기록한다.
+- 완료 관문: 디자인 카드는 판정이 approve 가 아니면 `board.ps1 move -To done` 이 거부된다. 총괄이 직접 확인했거나 사용자가 결정한 통과는 `design.ps1 pass -Reason` 으로 남긴다.
+- 플랫폼 대응표 `docs/tandem/design-platforms.md`: 웹 기준 규칙을 Android(Compose, View), iOS, Flutter, 데스크톱으로 옮기는 표, 최고 심각도 조건의 플랫폼별 표현, 렌더 증거 수단, 절차 스킬 옮기기.
+- 새 도구 `design.ps1 status|brief|check|pass|platform`, 새 문서 `design.md`. 모델 배치: RD 는 mid 단계 별도 세션, 디자인 과제 구현은 mid 단계 이상.
+- 칸반 보드 화면을 같은 규칙으로 고쳤다: 라이트 모드 글자 대비 4.67:1 이상(이전 4.28-4.46), 방금 바뀐 카드에 글자 표시, 읽기 실패 문구에 해결 방법, 고정폭 숫자, 좁은 창에서 칸 줄바꿈, 카드에 디자인 판정 표시.
+- 수정: 같은 모델일 때 R3 같은 후속 호출이 검수(R2, RD) 세션을 이어 쓰던 문제, 읽기 전용 라운드에서 산출물 폴더가 없으면 저장에 실패하던 문제, `-Plan` 이 빈 폴더를 만들던 문제.
+- 설치기: 파일 계약에 `tree` 종류(폴더 통째 배치, 파일별 지문 추적). config 에 `design`(enabled, platform, gate).
+- 업그레이드: 설치기를 다시 실행한다. `tandem/design/` 파일 66개, 문서 2개, 도구 1개가 추가된다. `/tandem` 적응을 다시 돌리면 `design.platform` 이 채워진다.
+
 ## v1.9 (2026-10-29)
 
 - 작업 히스토리: 새 도구 `history.ps1 add|show|search|index|brief|run`. 주제마다 `docs/tandem/history/<주제>.md` 에 번호 붙은 기록과 맨 위 요약 카드(목표·현재·다음·결정·파일·과제·최근 실행). `INDEX.md` 는 주제당 한 줄.

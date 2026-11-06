@@ -55,12 +55,12 @@ try {
     if (!$Path) { $Path = Join-Path (Join-Path $root $docsRoot) 'log/runs.jsonl' } elseif (![IO.Path]::IsPathRooted($Path)) { $Path = Join-Path (Get-Location).Path $Path }
     $text = @{
         ko = @{ head='| 종류 | 에이전트 | 모델 | 맡긴 작업 | 상태 | 시간 | 토큰 |'; none='없음'; total='합계'; runs='{0}건'
-                kinds=@{R1='작업';R2='검토';R3='대응';single='단일';batch='배치'}
+                kinds=@{R1='작업';R2='검토';R3='대응';RD='디자인';single='단일';batch='배치'}
                 status=@{ok='완료';fail='실패';failed='실패';partial='일부';stopped='중단';running='진행 중'}
                 cached='캐시 {0}'; more='표에는 최근 {0}건만 표시, 합계는 전체 {1}건.'; unknown='토큰 모름 {0}건.'
                 excludeMain='총괄 자신의 사용량은 빠져 있습니다(token-report.ps1).'; excludeTeam='총괄·팀장·전달책 자신의 사용량은 빠져 있습니다(token-report.ps1).' }
         en = @{ head='| Kind | Agent | Model | Task | Status | Time | Tokens |'; none='none'; total='Total'; runs='{0} runs'
-                kinds=@{R1='work';R2='review';R3='response';single='single';batch='batch'}
+                kinds=@{R1='work';R2='review';R3='response';RD='design';single='single';batch='batch'}
                 status=@{ok='done';fail='failed';failed='failed';partial='partial';stopped='stopped';running='running'}
                 cached='{0} cached'; more='Showing the latest {0}; totals cover all {1}.'; unknown='Tokens unknown for {0}.'
                 excludeMain="The lead's own usage is not included (token-report.ps1)."; excludeTeam="The lead, manager and dispatcher usage is not included (token-report.ps1)." }

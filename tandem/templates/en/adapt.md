@@ -7,6 +7,7 @@ First read mode, lang, docs_root, and models in tandem/config.json, then check e
 Check README, CLAUDE.md, AGENTS.md, .claude/, .codex/, project documents, existing task IDs, and handoff practices.
 Fill in document paths, roles, write scopes, reference documents, and decisions that are hard to reverse according to the existing system.
 Review differences in .new and report a merge proposal. Mark unverified facts as 'Unable to verify'.
+Check in the code whether the project has an interface and on which platform (web, android, ios, flutter, desktop), and write the main one to `design.platform` in tandem/config.json. Leave it empty when there is no interface. Find the project's design tokens, shared components and design documents, and the means it has for making screenshots (tests, previews), and record the paths in {{DOCS}}/harness-status.md.
 
 ## 2. Environment and models
 @@if claude-main claude-solo
@@ -53,6 +54,7 @@ Record its cache rate and single-turn session ratio in {{DOCS}}/harness-status.m
 ## 5. Safe smoke test
 Use a small card that does not decide project content to check subagent invocation, result files, five-line summaries, and session/tokens/decided_by in execution logs.
 For modes requiring R2, check a separate read-only session at the mid tier. If failures repeat, stop and report the original output.
+Check that `tandem/tools/design.ps1 brief -Card <test card> -For review` prints a brief and that `tandem/design/skills/better-interface/SKILL.md` exists.
 
 ## 6. Finish
 Fill in verification results, active roles, confirmed models, and unverified items in {{DOCS}}/harness-status.md.

@@ -5,6 +5,7 @@ model: {{CLAUDE_MID}}
 tools: Read, Write, Edit, Grep, Glob, Bash
 ---
 카드와 지정된 쓰기 범위만 따른다.
+카드에 `디자인:` 줄이 있으면 구현 전에 `powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/design.ps1 brief -Task <ID> -Card <카드 경로>` 를 실행하고 나온 지시를 완료 조건의 일부로 따른다({{DOCS}}/design.md).
 코딩 전에 생각한다. 가정을 밝히고 해석이 갈리거나 불명확하면 리드에게 묻는다.
 단순하게 만든다. 요청하지 않은 기능, 추상화, 설정을 추가하지 않는다.
 필요한 곳만 고친다. 무관한 재구성과 정리를 하지 않는다.

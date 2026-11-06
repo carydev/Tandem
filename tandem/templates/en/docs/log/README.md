@@ -17,10 +17,10 @@ Example:
 |---|---|
 | ts | ISO 8601 timestamp |
 | kind | codex-run/claude-run/batch/native |
-| agent | Agent that ran. Wrapper defaults codex-lead, codex-reviewer, claude-worker, claude-reviewer, codex-batch; null if unknown |
+| agent | Agent that ran. Wrapper defaults codex-lead, codex-reviewer, claude-worker, claude-reviewer, codex-design-reviewer, claude-design-reviewer, codex-batch; null if unknown |
 | title | Card title from its first line, or null |
 | duration_s | Elapsed seconds, or null if unknown |
-| task, round | Task ID and R1/R2/R3/single |
+| task, round | Task ID and R1/R2/R3/RD/single (RD is the design review) |
 | model, effort | Actual model and reasoning effort |
 | result | ok/fail/partial/stopped (stopped after the same failure 3 times) |
 | escalated_from | Previous model before escalation, or null. Required for a top model unless decided_by=human |
@@ -31,9 +31,11 @@ Example:
 | tokens | input/cached/output usage for this call ({"total": N} allowed for native calls), or null if unknown |
 | resumed | Whether the prior session was resumed |
 | thread_total | Cumulative input/cached/output for the session, or null if unknown |
-| findings | R2 verdict counts {confirmed, needs_validation, rejected}; null when not R2 or unknown |
+| findings | R2 and RD verdict counts {confirmed, needs_validation, rejected}; null when neither or unknown |
+| design | The design line. RD gives `design=approve …` (or block, invalid); a build round has a value only while a design review is still owed. Otherwise null |
 | decided_by | jev/table/human |
 | note | Reason for failure or other noteworthy details |
 
 `tandem/tools/run-table.ps1 -Task <ID>` builds the report run table from this log (`-Since today|2h|all`, `-Max 10`). Columns missing from older records show as —.
 Every five runs, check failures and escalations by model, call counts, and token usage. The lead changes the routing table.
+Design review verdicts accumulate one line each in {{DOCS}}/log/design.jsonl. Only `design.ps1 check` and `design.ps1 pass` write it. Fields: ts, task, verdict (approve, block, invalid), declared, findings, review, by, reason. The done gate on the board and `design.ps1 status` read the last verdict in this file.

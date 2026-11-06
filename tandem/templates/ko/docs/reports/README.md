@@ -6,6 +6,8 @@
 | work/parts/ | 하위 일꾼 부분 산출물 |
 | critique/ | 별도 R2 반론 |
 | review/ | 조건부 교차 검수 |
+| review/<ID>-design.md | 디자인 검수(RD) |
+| work/<ID>-shots/ | 렌더 증거(스크린샷) |
 | setup/ | 설치·적응 보고서 |
 
 @@if claude-main

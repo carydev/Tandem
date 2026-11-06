@@ -42,6 +42,22 @@ needs_validation 은 발견자가 아닌 쪽이 사실을 확인한다. 총괄�
 R3 는 confirmed 와 needs_validation 마다 한 줄로 답한다: `- F1 fixed|disputed|deferred <한 줄>`. `review-check.ps1 -Review <R2> -Response <R3>` 가 빠진 ID 를 알린다.
 confirmed 높음 이 fixed 가 아니면 반려한다. disputed 는 총괄이 판정하고, 3라운드 뒤에도 남은 것은 쟁점으로 기록한다.
 
+## 디자인 과제
+
+카드에 `디자인:` 줄이 있으면 {{DOCS}}/design.md 를 따른다. 만들 때 Interfaces 스킬(`tandem/design/skills/`)을 읽고, 디자인 검수(라운드 RD)가 approve 여야 완료다.
+@@if claude-main codex-main
+래퍼가 R1·R3·single 프롬프트에 디자인 지시를 자동으로 붙인다. 끝난 뒤 요약에 `design=` 줄이 붙으면 할 일이 남은 것이다. `review=missing`, `review=block`, `review=invalid` 는 RD 가 남았다는 뜻이고, `design=unmarked` 는 줄 없는 카드로 화면 파일이 바뀌었다는 뜻이다.
+RD 는 래퍼를 `-Round RD` 로 호출한다(mid 단계, 강도 high, 출력 {{DOCS}}/reports/review/<ID>-design.md). 래퍼가 읽기 전용 새 세션에서 변경분과 검수 지시를 붙이고 `design.ps1 check` 로 판정을 기록해 요약에 `design=approve`, `design=block`, `design=invalid` 중 하나를 붙인다.
+@@endif
+@@if codex-solo
+하위 일꾼은 구현 전에 `design.ps1 brief -Task <ID> -Card <카드>` 가 내는 지시를 따른다. RD 는 총괄이 `codex-run.ps1 -Round RD` 로 호출한다(mid 단계, 강도 high, 출력 {{DOCS}}/reports/review/<ID>-design.md). 래퍼가 읽기 전용 새 세션에서 변경분과 검수 지시를 붙이고 판정을 기록해 요약에 `design=approve`, `design=block`, `design=invalid` 중 하나를 붙인다.
+@@endif
+@@if claude-solo
+하위 일꾼은 구현 전에 `design.ps1 brief -Task <ID> -Card <카드>` 가 내는 지시를 따른다. RD 는 총괄이 `design.ps1 brief -Task <ID> -Card <카드> -For review` 출력과 `diff.ps1 -Task <ID>` 경로를 tandem-critic 에게 주어 {{DOCS}}/reports/review/<ID>-design.md 에 쓰게 하고, `design.ps1 check -Task <ID> -Review <경로>` 로 판정을 기록한다.
+@@endif
+RD 의 지적도 R2 와 같은 판정 줄을 쓰고 confirmed·needs_validation 마다 R3 응답을 받는다. 다만 지적 최소 3개 규칙은 RD 에 적용하지 않는다. block 이면 R3 로 고친 뒤 RD 를 다시 받는다.
+디자인 카드는 판정이 approve 가 되기 전에는 `board.ps1 move -To done` 이 거부된다. RD 가 도는 동안 카드는 review 칸에 있다.
+
 ## 칸반 보드
 
 {{DOCS}}/board/index.html 을 브라우저로 열면 3초마다 갱신되는 보드가 보인다(`board.ps1 open`). 데이터는 같은 폴더의 board.json 이며 board.ps1 만 고친다.

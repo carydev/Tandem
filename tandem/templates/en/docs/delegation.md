@@ -42,6 +42,22 @@ Someone other than the finder verifies needs_validation items: the lead checks d
 R3 answers every confirmed and needs_validation item in one line: `- F1 fixed|disputed|deferred <one line>`. `review-check.ps1 -Review <R2> -Response <R3>` reports missing IDs.
 Reject the work if a confirmed high finding is not fixed. The lead rules on disputed items; anything still open after three rounds is recorded as an open issue.
 
+## Design Tasks
+
+When a card carries a `Design:` line, follow {{DOCS}}/design.md. The work is built by reading the Interfaces skills (`tandem/design/skills/`) and is complete only when the design review (round RD) is approve.
+@@if claude-main codex-main
+The wrapper appends the design brief to R1, R3 and single prompts automatically. A `design=` line in the summary afterwards means work remains. `review=missing`, `review=block` and `review=invalid` mean RD is still owed, and `design=unmarked` means a card without the line changed interface files.
+Call RD through the wrapper with `-Round RD` (mid tier, effort high, output {{DOCS}}/reports/review/<ID>-design.md). The wrapper runs a read-only new session, attaches the changes and the review brief, records the verdict with `design.ps1 check` and adds one of `design=approve`, `design=block` or `design=invalid` to the summary.
+@@endif
+@@if codex-solo
+Before implementing, the worker follows the brief printed by `design.ps1 brief -Task <ID> -Card <card>`. The lead calls RD with `codex-run.ps1 -Round RD` (mid tier, effort high, output {{DOCS}}/reports/review/<ID>-design.md). The wrapper runs a read-only new session, attaches the changes and the review brief, records the verdict and adds one of `design=approve`, `design=block` or `design=invalid` to the summary.
+@@endif
+@@if claude-solo
+Before implementing, the worker follows the brief printed by `design.ps1 brief -Task <ID> -Card <card>`. For RD the lead gives tandem-critic the output of `design.ps1 brief -Task <ID> -Card <card> -For review` and the path from `diff.ps1 -Task <ID>`, has it write to {{DOCS}}/reports/review/<ID>-design.md and records the verdict with `design.ps1 check -Task <ID> -Review <path>`.
+@@endif
+RD findings use the same verdict lines as R2, and every confirmed and needs_validation finding gets an R3 response. The minimum of three findings does not apply to RD. On block, fix in R3 and get RD again.
+For a design card, `board.ps1 move -To done` is refused until the verdict is approve. The card sits in review while RD runs.
+
 ## Kanban Board
 
 Open {{DOCS}}/board/index.html in a browser for a board that refreshes every 3 seconds (`board.ps1 open`). Its data is board.json in the same folder; only board.ps1 edits it.

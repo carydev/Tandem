@@ -49,13 +49,13 @@ function Note([string]$message) { Write-Host "  $message" }
 function ReadUtf8([string]$path) { return [IO.File]::ReadAllText($path, $script:strictUtf8) }
 function WriteUtf8([string]$path, [string]$content) {
   $dir = Split-Path -Parent $path
+  if ($script:Plan) { return }
   if (-not (Test-Path -LiteralPath $dir)) { [void][IO.Directory]::CreateDirectory($dir) }
   $encoding = $script:utf8
   if (Test-Path -LiteralPath $path) {
     $bytes = [IO.File]::ReadAllBytes($path)
     if ($bytes.Length -ge 3 -and $bytes[0] -eq 239 -and $bytes[1] -eq 187 -and $bytes[2] -eq 191) { $encoding = New-Object Text.UTF8Encoding($true) }
   }
-  if ($script:Plan) { return }
   [IO.File]::WriteAllText($path, $content, $encoding)
 }
 function WriteBytes([string]$path, [byte[]]$bytes) {
@@ -129,6 +129,25 @@ $langRoot = Join-Path $TemplateRoot $Lang
 if (-not (Test-Path -LiteralPath $langRoot)) { throw "$($m.missingLang): $langRoot" }
 $contract = (ReadUtf8 (Join-Path $sourceRoot 'tandem/files.json')) | ConvertFrom-Json
 if (-not $contract.files) { throw $m.emptyContract }
+# kind=tree: copy every file under src (relative to the repo root) to the same relative path under dst. Expanded into copy entries so the manifest tracks each file.
+$treeRoots = New-Object 'System.Collections.Generic.List[string]'
+$expanded = New-Object 'System.Collections.Generic.List[object]'
+foreach ($entry in $contract.files) {
+  if ($entry.kind -ne 'tree') { $expanded.Add($entry); continue }
+  $treeSource = Join-Path $sourceRoot $entry.src
+  $treeRoots.Add(([string]$entry.dst).Replace('\','/').TrimEnd('/'))
+  if (-not (Test-Path -LiteralPath $treeSource -PathType Container)) { Warn "$($m.missing): $treeSource"; continue }
+  $treePrefix = [IO.Path]::GetFullPath($treeSource).TrimEnd([char[]]@('/',[char]92))
+  foreach ($file in (Get-ChildItem -LiteralPath $treeSource -Recurse -File | Sort-Object FullName)) {
+    $part = $file.FullName.Substring($treePrefix.Length + 1).Replace('\','/')
+    $expanded.Add([pscustomobject]@{ src="$(([string]$entry.src).TrimEnd('/'))/$part"; dst="$(([string]$entry.dst).TrimEnd('/'))/$part"; kind='copy'; modes=$entry.modes })
+  }
+}
+$contract.files = $expanded.ToArray()
+function InTree([string]$relative) {
+  foreach ($prefix in $script:treeRoots) { if ($relative.StartsWith($prefix + '/', [StringComparison]::OrdinalIgnoreCase)) { return $true } }
+  return $false
+}
 
 # Preserve existing values while filling the v1.1 schema and migrating v1.0 model names.
 $project = Split-Path -Leaf $root
@@ -177,6 +196,10 @@ if (-not $cfg.hook) { $cfg | Add-Member -NotePropertyName hook -NotePropertyValu
 [void](Prop $cfg.hook 'max_chars' 800)
 if (-not $cfg.history) { $cfg | Add-Member -NotePropertyName history -NotePropertyValue ([pscustomobject]@{}) -Force }
 foreach ($pair in @(@('inject',$true),@('max_chars',1500),@('max_entries',20),@('keep',10),@('active_days',30),@('active_max',15))) { [void](Prop $cfg.history $pair[0] $pair[1]) }
+if (-not $cfg.design) { $cfg | Add-Member -NotePropertyName design -NotePropertyValue ([pscustomobject]@{}) -Force }
+[void](Prop $cfg.design 'enabled' $true)
+[void](Prop $cfg.design 'platform' '')
+[void](Prop $cfg.design 'gate' $true)
 if (-not $cfg.update) { $cfg | Add-Member -NotePropertyName update -NotePropertyValue ([pscustomobject]@{}) -Force }
 [void](Prop $cfg.update 'repo' 'carydev/Tandem')
 [void](Prop $cfg.update 'ref' 'main')
@@ -339,7 +362,7 @@ foreach ($prop in @($manifest.files.PSObject.Properties)) {
   [void]$handled.Add($relative)
   $full = $null
   try {
-    if (-not $knownFiles.Contains($relative) -or [IO.Path]::IsPathRooted($relative) -or $relative -match '(^|/)\.{1,2}(/|$)' -or $relative.Contains(':')) { throw 'Unexpected manifest path' }
+    if ((-not $knownFiles.Contains($relative) -and -not (InTree $relative)) -or [IO.Path]::IsPathRooted($relative) -or $relative -match '(^|/)\.{1,2}(/|$)' -or $relative.Contains(':')) { throw 'Unexpected manifest path' }
     $full = [IO.Path]::GetFullPath((Join-Path $root $relative))
     $rootPrefix = [IO.Path]::GetFullPath($root).TrimEnd([char[]]@('/',[char]92)) + [IO.Path]::DirectorySeparatorChar
     if (-not $full.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)) { throw 'Outside project root' }

@@ -35,3 +35,6 @@ Fill in environment checks with actual execution results during adaptation. Leav
 | Jev key and smoke test | Unable to verify |
 | Fast/service_tier | Unable to verify |
 | Cache rate / single-turn session ratio | Unable to verify |
+| Design platform (config design.platform) | Unable to verify |
+| Design tokens, components and document paths | Unable to verify |
+| Rendered evidence means (screenshot tests, previews) | Unable to verify |

@@ -17,10 +17,10 @@
 |---|---|
 | ts | ISO 8601 시각 |
 | kind | codex-run/claude-run/batch/native |
-| agent | 실행한 에이전트 이름. 래퍼 기본값 codex-lead·codex-reviewer·claude-worker·claude-reviewer·codex-batch, 모르면 null |
+| agent | 실행한 에이전트 이름. 래퍼 기본값 codex-lead·codex-reviewer·claude-worker·claude-reviewer·codex-design-reviewer·claude-design-reviewer·codex-batch, 모르면 null |
 | title | 카드 첫 줄 제목, 없으면 null |
 | duration_s | 걸린 초, 모르면 null |
-| task, round | 과제 ID와 R1/R2/R3/single |
+| task, round | 과제 ID와 R1/R2/R3/RD/single (RD 는 디자인 검수) |
 | model, effort | 실제 모델과 추론 강도 |
 | result | ok/fail/partial/stopped (같은 실패 3회로 멈춤) |
 | escalated_from | 승급 전 모델, 없으면 null. 최상위 모델이면 필수(사용자 지정은 decided_by=human) |
@@ -31,9 +31,11 @@
 | tokens | 이번 호출의 input/cached/output 사용량(네이티브는 {"total": N} 가능), 알 수 없으면 null |
 | resumed | 이전 세션을 이어 썼는지 여부 |
 | thread_total | 세션의 누계 input/cached/output, 알 수 없으면 null |
-| findings | R2 판정 수 {confirmed, needs_validation, rejected}. R2 가 아니거나 모르면 null |
+| findings | R2·RD 판정 수 {confirmed, needs_validation, rejected}. 둘 다 아니거나 모르면 null |
+| design | 디자인 줄. RD 는 `design=approve …`(또는 block, invalid), 구현 라운드는 디자인 검수가 남았을 때만 값이 있다. 없으면 null |
 | decided_by | jev/table/human |
 | note | 실패 이유 또는 특이사항 |
 
 `tandem/tools/run-table.ps1 -Task <ID>` 는 이 로그로 보고용 실행 표를 만든다(`-Since today|2h|all`, `-Max 10`). 예전 기록에 없는 칸은 —로 나온다.
 집계는 5건마다 모델별 실패와 승급, 호출 수, 토큰 사용을 확인한다. 배치표 변경은 총괄이 한다.
+디자인 검수 판정은 {{DOCS}}/log/design.jsonl 에 한 줄씩 쌓인다. `design.ps1 check` 와 `design.ps1 pass` 만 쓴다. 필드는 ts, task, verdict(approve, block, invalid), declared, findings, review, by, reason 이다. 보드의 완료 관문과 `design.ps1 status` 가 이 파일의 마지막 판정을 본다.

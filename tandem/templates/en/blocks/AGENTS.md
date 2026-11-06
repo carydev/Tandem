@@ -9,6 +9,7 @@
 - Run commands with long output (build, test, install) through `powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/quiet.ps1 -Command "<command>" -Name <name>`. It prints only the exit code, problem lines, and the last lines; the full output stays in a log file. Search that log if you need more.
 - Deliver results in files and a summary of five lines or fewer. Do not copy the full content into the main context.
 - Use the top model only when the lead decides to escalate (model-routing.md).
+- When making or changing a screen or a document people look at, follow {{DOCS}}/design.md. The card's `Design:` line decides, and the rules are the skill files under `tandem/design/skills/`, read by path. Output quality comes before token savings.
 
 @@if claude-main
 You are the Codex execution team under the Claude lead. Read the card first and write only the assigned files.

@@ -29,6 +29,8 @@ Codex top-level lead → workers in .codex/agents. Receive worker results as fil
 - G2: Brief the results, then update source-of-truth documents after an explicit decision.
 - Decide using the goal, constraints, evidence, risks, unresolved critiques, and review findings.
 - Follow operating-model.md for the scope of cross-review on decisions that are hard to reverse.
+- For a task that makes a screen or a document people look at, put the `Design:` line on the card at G1. The task passes only when the design review (RD) is approve, and the G2 briefing includes the design verdict and the remaining findings ({{DOCS}}/design.md). A `design=` line in a worker summary means that task is not finished yet.
+- Output quality comes before token savings. Do not cut the skill reading or the design review on a design task to save cost.
 - Jev only helps choose the model and effort, escalation, and whether cross-review is needed. It does not make the final decision or bypass G1/G2.
 
 ## Sessions and cost

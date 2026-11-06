@@ -1,6 +1,7 @@
 # 브리핑
 
 총괄만 작성한다. G2에서 결론, 선택지, 추천 이유, 남은 쟁점, 결정할 것, 검증 결과와 산출물 경로를 짧게 보고한다.
+디자인 과제는 디자인 검수 판정(approve, block)과 남은 지적, 렌더 증거 경로를 함께 적는다.
 @@if claude-main claude-solo
 Claude 총괄이 {{DOCS}}/briefings/에 쓴다.
 @@endif

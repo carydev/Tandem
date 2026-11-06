@@ -9,6 +9,7 @@
 - 빌드·테스트·설치처럼 출력이 긴 명령은 `powershell -NoProfile -ExecutionPolicy Bypass -File tandem/tools/quiet.ps1 -Command "<명령>" -Name <이름>` 으로 돌린다. 종료 코드·문제 줄·끝 줄만 나오고 전체는 로그 파일에 남는다. 더 필요하면 그 로그를 검색한다.
 - 결과는 파일과 5줄 이내 요약으로 전달한다. 본문을 메인 컨텍스트에 복사하지 않는다.
 - 최상위 모델은 총괄이 승급을 결정했을 때만 쓴다(model-routing.md).
+- 화면이나 사람이 보는 문서를 만들거나 고칠 때는 {{DOCS}}/design.md 를 따른다. 카드의 `디자인:` 줄이 기준이고, 규칙은 `tandem/design/skills/` 의 스킬 파일을 경로로 읽는다. 결과물 품질이 토큰 절약보다 우선이다.
 
 @@if claude-main
 너는 Claude 총괄 아래 Codex 실무팀이다. 카드를 먼저 읽고 지정된 파일만 쓴다.

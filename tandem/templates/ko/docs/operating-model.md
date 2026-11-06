@@ -2,6 +2,7 @@
 
 사용자 언어는 {{LANG_NAME}}이다. 문서와 보고도 {{LANG_NAME}}로 쓴다.
 지시 → G1 과제 정의 확인 → 카드 작성 → 하위 실행 → 검수 → G2 브리핑 → 승인 뒤 기준 문서 반영 순서다.
+화면과 사람이 보는 문서는 검수 단계에서 디자인 검수(RD)를 함께 거친다. 규칙은 {{DOCS}}/design.md 다.
 기준 문서는 적응 단계에서 표를 채운다. 없으면 없다고 명시한다. 되돌리기 어려운 결정 목록도 프로젝트에 맞춰 채운다.
 
 @@if claude-main
@@ -25,6 +26,7 @@
 | {{DOCS}}/model-routing.md | 총괄 |
 | {{DOCS}}/log/runs.jsonl | main: 실행 래퍼, solo: 총괄이 하위 호출마다 append |
 | {{DOCS}}/harness-status.md | 설치·적응 세션 |
+| tandem/design/ | 읽기 전용. Interfaces 스킬 사본이며 설치 스크립트만 갱신 |
 
 ## 프로젝트 기준 문서
 | 경로 | 역할 |

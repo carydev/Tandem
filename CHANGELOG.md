@@ -2,6 +2,19 @@
 
 **English** | [한국어](CHANGELOG.ko.md)
 
+## v1.10 (2026-11-06)
+
+- Design quality: copies of 13 Interfaces skills ([jakubkrehel/skills](https://github.com/jakubkrehel/skills) v1.17.0, MIT) are installed under `tandem/design/skills/`. Agents read them by path, so nothing is installed separately or invoked by hand. Included in every mode.
+- One card line applies it: `Design: <web|android|ios|flutter|desktop|doc>`. The wrapper appends the skill brief to build-round prompts (in solo modes the worker runs `design.ps1 brief`) and reports what is left through the `design=` line of the summary. A card without the line that changes interface files gets `design=unmarked`.
+- Design review round `RD`: a read-only new session receives the changes and reviews with the `better-interface` procedure and the `interface-review` classification. The last line is `VERDICT: approve` or `VERDICT: block`. A top-severity finding this change introduced means block even when the reviewer wrote approve. The minimum of three findings does not apply. `design.ps1 check` records the verdict in `log/design.jsonl`.
+- Done gate: `board.ps1 move -To done` is refused for a design card unless the verdict is approve. An approve the lead verified personally or the user decided is recorded with `design.ps1 pass -Reason`.
+- Platform mapping `docs/tandem/design-platforms.md`: tables that carry the web rules over to Android (Compose, View), iOS, Flutter and desktop, the top-severity conditions in platform terms, the means of rendered evidence and how to carry over the procedure skills.
+- New tool `design.ps1 status|brief|check|pass|platform` and new document `design.md`. Model routing: RD runs in a separate mid-tier session, and design task implementation goes to the mid tier or higher.
+- The kanban board page was fixed to the same rules: light-mode text contrast of 4.67:1 or better (was 4.28-4.46), a text label on just-updated cards, a way to recover in the read-failure message, tabular numbers, columns that wrap in a narrow window and the design verdict on each card.
+- Fixes: follow-up calls such as R3 resumed a review session (R2, RD) when the model was the same; a read-only round failed to save when the output folder did not exist; `-Plan` created empty folders.
+- Installer: new `tree` kind in the file contract (a whole folder, tracked per file in the manifest). The config gains `design` (enabled, platform, gate).
+- Upgrade: rerun the installer. It adds 66 files under `tandem/design/`, two documents and one tool. Rerun `/tandem` adaptation to fill in `design.platform`.
+
 ## v1.9 (2026-10-29)
 
 - Work history: new tool `history.ps1 add|show|search|index|brief|run`. Each topic keeps numbered entries in `docs/tandem/history/<topic>.md` with a summary card on top (goal, now, next, decisions, files, tasks, recent runs). `INDEX.md` has one line per topic.

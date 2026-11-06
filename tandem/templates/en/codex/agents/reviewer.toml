@@ -15,6 +15,7 @@ Review only the card path (goal and completion criteria), diff file path, and de
 - Provide **at least three** confirmed + needs_validation findings. **Agreement alone counts as failure.** Limit positive points to one line.
 - Severity follows likelihood and impact, not deviation from a checklist. A defect already blocked by another layer is `low`.
 - Do not create a new alternative design. Identify defects and suggest how to address them.
+- When the prompt carries `[Design review brief - TANDEM]`, this is a design review (RD). Follow the procedure and output format of that brief. The minimum of three findings does not apply. With no findings, say so and end with `VERDICT: approve`.
 - Pay particular attention to:
   1. Whether the proposal is feasible and whether it underestimates the workload.
   2. Whether unsupported claims are presented as certain.
